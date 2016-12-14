@@ -1,19 +1,15 @@
+// Merely parses raw text file and spits into courses based on the regex header
+//  ie: MAE 2801 ED-TL&L 4(3,1)
+//  then places into array and saves.
+
 var fs = require('fs');
 
-const regex = /^(([A-Z]{3} [^ ]*) ([^ ].*[^ ]) ([0-9]|VAR).*\))([\s\S]+?):[\s]*PR:/mg;
 const rawTitleRegex = /^([A-Z]{3} [^ ]{4,5}[A-Z]{0,1}) ([^ ].*[^ ]) ([0-9]|VAR).*\)$(?=\n[A-Z])/mg;
-// old ^([A-Z]{3} [^ ]*) ([^ ].*[^ ]) ([0-9]|VAR).*\)$/mg;
+
 var str = fs.readFileSync('ucfCourseRawData.txt', 'utf8');
 
 var courses = [];
 var data;
-
-var c = new Object()
-c.rawInfo = "";
-c.name = "";
-c.title = "";
-c.credits = "";
-c.college = "";
 
 var lastIndex = 0;
 while ((data = rawTitleRegex.exec(str)) !== null) {
@@ -22,34 +18,24 @@ while ((data = rawTitleRegex.exec(str)) !== null) {
         rawTitleRegex.lastIndex++;
     }
 
+    //Set desc on previous course
     if (courses.length > 0) {
-        console.log("``````````````````````````````````````````")
-            //Previous course
         var pCourse = courses[courses.length - 1];
-        console.log(pCourse)
+
         var pNameEnd = pCourse.lastIndex;
         var desc = str.substring(pNameEnd, data.index);
-        console.log(desc)
+
         pCourse.rawInfo = desc;
-        // courses[courses.size-1].title =  
-        console.log("---")
-        console.log(JSON.stringify(pCourse))
-        console.log("---")
     }
 
-    // var match = data[1].split(/\r?\n/);
     data.forEach((m, groupIndex) => {
-        data[groupIndex] = ((m.replace(/\r?\n|\r|\n/g, " ")).replace(/(  )/gm, " ")).trim();
-        //  console.log(`Found match, group ${groupIndex}: ${m}`);
+        data[groupIndex] = cleanupString(m);
     })
-    console.log("-" + data[0] + "-")
+
     var match = data;
     var c = new Object()
-        // c.rawInfo = match[0];
     c.name = match[1];
-    console.log("*************** " + data.index + " *************************")
     c.lastIndex = data.index + data[0].length;
-    // c.title = match[5];
     c.college = match[2];
     c.credits = match[3];
 
@@ -70,3 +56,8 @@ stream.once('open', function(fd) {
     stream.end();
     process.exit();
 });
+
+//Remove whitespace and newlines
+function cleanupString(str) {
+    return ((str.replace(/\r?\n|\r|\n/g, " ")).replace(/(  )/gm, " ")).trim();
+}
