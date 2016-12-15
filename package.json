@@ -1,0 +1,22 @@
+{
+  "name": "canvas-skill",
+  "version": "1.0.0",
+  "description": "A Amazon Alexa skill to communicate with Instructre Canvas grading system",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/clayton13/AlexaCanvasSkill.git"
+  },
+  "author": "Clayton White",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/clayton13/AlexaCanvasSkill/issues"
+  },
+  "homepage": "https://github.com/clayton13/AlexaCanvasSkill#readme",
+  "dependencies": {
+    "fuse.js": "^2.6.1"
+  }
+}

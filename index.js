@@ -190,14 +190,24 @@ function getGrade(intent, session, callback) {
     var x = new User();
 
     // x.getGrade(null, null, null);
-    console.log("---------------\n" + intent.slots.class + "\n--------------\n");
     x.findCourse(intent.slots.ClassName.value, function(y) {
         console.log("---------------" + y);
-        x.getGrade(y, function(q) {
-            var stringResult = "Your current grade in " + y.meta.title + " is " + q + " percent.";
+        if (!Array.isArray(y)) {
+            x.getGrade(y, function(q) {
+                var stringResult = "Your current grade in " + y.meta.title + " is " + q + " percent.";
+                callback(sessionAttributes,
+                    buildSpeechletResponse(intent.name, stringResult, repromptText, shouldEndSession));
+            });
+        } else {
+            var stringResult = "I could not tell what course, did you mean:"
+            var cnt = 1;
+            var match
+            for (match of y) {
+                stringResult += cnt++ + " " + match.item.meta.title;
+            }
             callback(sessionAttributes,
                 buildSpeechletResponse(intent.name, stringResult, repromptText, shouldEndSession));
-        });
+        }
     });
 
 

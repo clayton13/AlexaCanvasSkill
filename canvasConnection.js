@@ -3,6 +3,7 @@ var https = require('https');
 // var request = require("request");
 var globals = require('./globals');
 var fs = require('fs');
+var courseSearch = require("./tools/courseSearch");
 
 //Private vars
 var metaCourses = [];
@@ -14,9 +15,11 @@ function User() {
     this.token = "13~Rd735JtbD2tHTfc8YUlHR1VCShLx8nMAicDdBRfUOif7XK3N5DJELRlFQ8ICwNx5";
 }
 
+User.prototype.getMetaCourses = function() {
+    return metaCourses;
+};
 //Makes a put request to canvas
 function makePUT(path, data, token, callback) {
-    console.log(globals.BASE_URL)
     var options = {
         host: globals.BASE_URL,
         headers: {
@@ -56,7 +59,6 @@ function makePUT(path, data, token, callback) {
 }
 
 function makeGET(path, data, token, callback) {
-    console.log(globals.BASE_URL)
     var options = {
         host: globals.BASE_URL,
         headers: {
@@ -94,7 +96,7 @@ function makeGET(path, data, token, callback) {
     if (data) {
         req.write(data);
     }
-    console.log(req._body)
+    // console.log(req._body)
     req.end();
 
 }
@@ -116,7 +118,7 @@ function getNicknames(course, token, callback) {
     }
 
     makeGET("/api/v1/users/self/course_nicknames/" + course, null, token, function(d) {
-        console.log("got: " + d);
+        console.log("got nicknames: " + d + "\n\n");
         callback(d)
     });
 }
@@ -168,16 +170,13 @@ function findCourse(query, callback) {
     console.log("test")
 
     function doSearch(query) {
-        metaCourses.forEach((course, index) => {
-            var qstring = JSON.stringify(course)
-            qstring = qstring.toLowerCase();
-            if (qstring.includes(query)) {
-                // match = course;
-                console.log("MATCH: " + course.meta.title);
-                callback(course);
-                return;
-            }
-        });
+        var result = courseSearch(metaCourses, query);
+        if (Array.isArray(result)) {
+            console.log("Not a concrete match found");
+            callback(result);
+        } else {
+            callback(result);
+        }
     }
 
     if (typeof metaCourses != "undefined" && metaCourses != null && metaCourses.length > 0) {
@@ -194,7 +193,7 @@ function findCourse(query, callback) {
 
 function getGrade(course, callback) {
     course.id = course.id || course.course_id;
-    console.log("looking for: " +course.id)
+    console.log("looking for: " + course.id);
     //So canvas returns two types of ids, one with a bunch of padding 0s and
     //  one without. But their API is picky and at times only will accept
     //  the one with the padding...
@@ -204,8 +203,8 @@ function getGrade(course, callback) {
     makeGET("/api/v1/courses/", "include[]=total_scores", this.token, function(d) {
         // console.log("got: " + d);
         var courses = JSON.parse(d);
-
-        courses.forEach((c, index) => {
+        for (var i = 0; i < courses.length; i++) {
+            var c = courses[i];
             if ((c.id).toString().includes(course.id) || (c.id) == (course.id)) {
                 var cscore = c.enrollments[0].computed_current_score;
                 var fscore = c.enrollments[0].computed_final_score;
@@ -214,8 +213,7 @@ function getGrade(course, callback) {
                 callback(score)
                 return;
             }
-        });
-
+        }
     });
 };
 User.prototype.getGrade = getGrade;
