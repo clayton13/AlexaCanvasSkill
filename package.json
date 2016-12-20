@@ -17,6 +17,10 @@
   },
   "homepage": "https://github.com/clayton13/AlexaCanvasSkill#readme",
   "dependencies": {
-    "fuse.js": "^2.6.1"
+    "alexa-app": "^2.3.4",
+    "aws-sdk": "^2.7.15",
+    "body-parser": "^1.15.2",
+    "fuse.js": "^2.6.1",
+    "querystring": "^0.2.0"
   }
 }

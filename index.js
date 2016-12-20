@@ -1,286 +1,99 @@
 'use strict';
 var https = require('https');
 var User = require('./canvasConnection');
+var storage = require('./storage');
 
+var alexa = require('alexa-app');
+var app = new alexa.app('CanvasGradie');
 
-/**
- * This sample demonstrates a simple skill built with the Amazon Alexa Skills Kit.
- * The Intent Schema, Custom Slots, and Sample Utterances for this skill, as well as
- * testing instructions are located at http://amzn.to/1LzFrj6
- *
- * For additional samples, visit the Alexa Skills Kit Getting Started guide at
- * http://amzn.to/1LGWsLG
- */
+app.intent('GetGradeIntent', {
+        "slots": [{
+            "name": "ClassName",
+            "type": "LIST_OF_CLASSES"
+        }],
+        "utterances": ["GetGradeIntent what grades",
+            "GetGradeIntent what is my grade in {ClassName} class",
+            "GetGradeIntent what is my current grade in {ClassName} class",
+            "GetGradeIntent what is my grade in {ClassName}",
+            "GetGradeIntent what is my current grade in {ClassName}",
+        ]
 
+        // "slots": {
+        //     "number": "NUMBER"
+        // },
+        // "utterances": ["say the number {1-100|number}"]
+    },
+    function(request, response) {
+        var number = request.slot('ClassName');
+        // console.log(this.data.session.user.userId)
+        console.log(request.sessionDetails)
+            // console.log(request.sessionDetails.accessToken)
 
-// --------------- Helpers that build all of the responses -----------------------
+        var accessToken = request.sessionDetails.accessToken;
+        console.log("TOKEN: " + accessToken)
+        if (accessToken) {
+            var token = accessToken;
 
-function buildSpeechletResponse(title, output, repromptText, shouldEndSession) {
-    return {
-        outputSpeech: {
-            type: 'PlainText',
-            text: output,
-        },
-        card: {
-            type: 'Simple',
-            title: `SessionSpeechlet - ${title}`,
-            content: `SessionSpeechlet - ${output}`,
-        },
-        reprompt: {
-            outputSpeech: {
-                type: 'PlainText',
-                text: repromptText,
-            },
-        },
-        shouldEndSession,
-    };
-}
-
-function buildResponse(sessionAttributes, speechletResponse) {
-    return {
-        version: '1.0',
-        sessionAttributes,
-        response: speechletResponse,
-    };
-}
-
-
-// --------------- Functions that control the skill's behavior -----------------------
-
-function getWelcomeResponse(callback) {
-    // If we wanted to initialize the session to have some attributes we could add those here.
-    const sessionAttributes = {};
-    const cardTitle = 'Welcome';
-    const speechOutput = 'Welcome to the Alexa Skills Kit sample. ' +
-        'Please tell me your favorite color by saying, my favorite color is red';
-    // If the user either does not reply to the welcome message or says something that is not
-    // understood, they will be prompted again with this text.
-    const repromptText = 'Please tell me your favorite color by saying, ' +
-        'my favorite color is red';
-    const shouldEndSession = false;
-
-    callback(sessionAttributes,
-        buildSpeechletResponse(cardTitle, speechOutput, repromptText, shouldEndSession));
-}
-
-function handleSessionEndRequest(callback) {
-    const cardTitle = 'Session Ended';
-    const speechOutput = 'Thank you for trying the Alexa Skills Kit sample. Have a nice day!';
-    // Setting this to true ends the session and exits the skill.
-    const shouldEndSession = true;
-
-    callback({}, buildSpeechletResponse(cardTitle, speechOutput, null, shouldEndSession));
-}
-
-function createFavoriteColorAttributes(favoriteColor) {
-    return {
-        favoriteColor,
-    };
-}
-
-/**
- * Sets the color in the session and prepares the speech to reply to the user.
- */
-function setColorInSession(intent, session, callback) {
-    const cardTitle = intent.name;
-    const favoriteColorSlot = intent.slots.Color;
-    let repromptText = '';
-    let sessionAttributes = {};
-    const shouldEndSession = false;
-    let speechOutput = '';
-
-    if (favoriteColorSlot) {
-        const favoriteColor = favoriteColorSlot.value;
-        sessionAttributes = createFavoriteColorAttributes(favoriteColor);
-        speechOutput = `I now know your favorite color is ${favoriteColor}. You can ask me ` +
-            "your favorite color by saying, what's my favorite color?";
-        repromptText = "You can ask me your favorite color by saying, what's my favorite color?";
-    } else {
-        speechOutput = "I'm not sure what your favorite color is. Please try again.";
-        repromptText = "I'm not sure what your favorite color is. You can tell me your " +
-            'favorite color by saying, my favorite color is red';
-    }
-
-    callback(sessionAttributes,
-        buildSpeechletResponse(cardTitle, speechOutput, repromptText, shouldEndSession));
-}
-
-function getColorFromSession(intent, session, callback) {
-    let favoriteColor;
-    const repromptText = null;
-    const sessionAttributes = {};
-    let shouldEndSession = false;
-    let speechOutput = '';
-
-    if (session.attributes) {
-        favoriteColor = session.attributes.favoriteColor;
-    }
-
-    if (favoriteColor) {
-        speechOutput = `Your favorite color is ${favoriteColor}. Goodbye.`;
-        shouldEndSession = true;
-    } else {
-        speechOutput = "I'm not sure what your favorite color is, you can say, my favorite color " +
-            ' is red';
-    }
-
-    // Setting repromptText to null signifies that we do not want to reprompt the user.
-    // If the user does not respond or says something that is not understood, the session
-    // will end.
-    callback(sessionAttributes,
-        buildSpeechletResponse(intent.name, speechOutput, repromptText, shouldEndSession));
-}
-
-
-// --------------- Events -----------------------
-
-/**
- * Called when the session starts.
- */
-function onSessionStarted(sessionStartedRequest, session) {
-    console.log(`onSessionStarted requestId=${sessionStartedRequest.requestId}, sessionId=${session.sessionId}`);
-}
-
-/**
- * Called when the user launches the skill without specifying what they want.
- */
-function onLaunch(launchRequest, session, callback) {
-    console.log(`onLaunch requestId=${launchRequest.requestId}, sessionId=${session.sessionId}`);
-
-    // Dispatch to your skill's launch.
-    getWelcomeResponse(callback);
-}
-
-/**
- * Called when the user specifies an intent for this skill.
- */
-function onIntent(intentRequest, session, callback) {
-    console.log(`onIntent requestId=${intentRequest.requestId}, sessionId=${session.sessionId}`);
-
-    const intent = intentRequest.intent;
-    const intentName = intentRequest.intent.name;
-
-    // Dispatch to your skill's intent handlers
-    if (intentName === 'MyColorIsIntent') {
-        setColorInSession(intent, session, callback);
-    } else if (intentName === 'WhatsMyColorIntent') {
-        getColorFromSession(intent, session, callback);
-    } else if (intentName === 'GetGradeIntent') {
-        getGrade(intent, session, callback);
-    } else if (intentName === 'AMAZON.HelpIntent') {
-        getWelcomeResponse(callback);
-    } else if (intentName === 'AMAZON.StopIntent' || intentName === 'AMAZON.CancelIntent') {
-        handleSessionEndRequest(callback);
-    } else {
-        throw new Error('Invalid intent');
-    }
-}
-
-
-
-
-
-function getGrade(intent, session, callback) {
-    let favoriteColor;
-    const repromptText = null;
-    const sessionAttributes = {};
-    let shouldEndSession = false;
-    let speechOutput = '';
-
-    var x = new User();
-
-    // x.getGrade(null, null, null);
-    x.findCourse(intent.slots.ClassName.value, function(y) {
-        console.log("---------------" + y);
-        if (!Array.isArray(y)) {
-            x.getGrade(y, function(q) {
-                var stringResult = "Your current grade in " + y.meta.title + " is " + q + " percent.";
-                callback(sessionAttributes,
-                    buildSpeechletResponse(intent.name, stringResult, repromptText, shouldEndSession));
-            });
+            var req = https.request({
+                host: 'api.amazon.com',
+                path: '/user/profile?access_token=' + token,
+                method: "GET"
+            }, function(res) {
+                // console.log('STATUS: ' + res.statusCode);
+                // console.log('HEADERS: ' + JSON.stringify(res.headers));
+                res.setEncoding('utf8');
+                res.on('data', function(chunk) {
+                    console.log('BODY: ' + chunk);
+                    res.removeAllListeners('data');
+                    var account = JSON.parse(chunk)
+                        //name, email, user_id
+                    console.log(account)
+                    response.say(account.name + ". You asked for the class " + number);
+                    response.send()
+                });
+            }).end();
         } else {
-            var stringResult = "I could not tell what course, did you mean:"
-            var cnt = 1;
-            var match
-            for (match of y) {
-                stringResult += cnt++ + " " + match.item.meta.title;
-            }
-            callback(sessionAttributes,
-                buildSpeechletResponse(intent.name, stringResult, repromptText, shouldEndSession));
+            response.say("Please link your account.");
+            response.send()
+            response.linkAccount();
         }
-    });
+        //just do it
+        return false;
+        // if (session.getUser().getAccessToken() == undefined) {
+        //     this.emit(':tellWithLinkAccountCard', 'to start using this skill, please use ' +
+        //         'the companion app to authenticate on Amazon ');
+        //     return;
+        // }
+        // this.emit(':tellWithLinkAccountCard', 'to start using this skill, please use ' +
+        //     'the companion app to authenticate on Amazon ');
+        // response.linkAccount().shouldEndSession(true).say('Your Twitter account is not linked.
+        //        Please use the Alexa app to link the account.');
+        // var x = new User();
+        // console.log("----------------")
 
+        // console.log("----------------")
+        //     // x.getGrade(null, null, null);
+        // x.findCourse(intent.slots.ClassName.value, function(y) {
+        //     console.log("---------------" + y);
+        //     if (!Array.isArray(y)) {
+        //         x.getGrade(y, function(q) {
+        //             var stringResult = "Your current grade in " + y.meta.title + " is " + q + " percent.";
+        //             callback(sessionAttributes,
+        //                 buildSpeechletResponse(intent.name, stringResult, repromptText, shouldEndSession));
+        //         });
+        //     } else {
+        //         var stringResult = "I could not tell what course, did you mean:"
+        //         var cnt = 1;
+        //         var match
+        //         for (match of y) {
+        //             stringResult += cnt++ + " " + match.item.meta.title;
+        //         }
+        //         callback(sessionAttributes,
+        //             buildSpeechletResponse(intent.name, stringResult, repromptText, shouldEndSession));
+        //     }
+        // });
 
-
-
-    // if (session.attributes) {
-    //     favoriteColor = session.attributes.favoriteColor;
-    // }
-
-    // if (favoriteColor) {
-    //     speechOutput = `Your favorite color is ${favoriteColor}. Goodbye.`;
-    //     shouldEndSession = true;
-    // } else {
-    //     speechOutput = "I'm not sure what your favorite color is, you can say, my favorite color " +
-    //         ' is red';
-    // }
-
-    // Setting repromptText to null signifies that we do not want to reprompt the user.
-    // If the user does not respond or says something that is not understood, the session
-    // will end.
-
-}
-
-
-/**
- * Called when the user ends the session.
- * Is not called when the skill returns shouldEndSession=true.
- */
-function onSessionEnded(sessionEndedRequest, session) {
-    console.log(`onSessionEnded requestId=${sessionEndedRequest.requestId}, sessionId=${session.sessionId}`);
-    // Add cleanup logic here
-}
-
-
-// --------------- Main handler -----------------------
-
-// Route the incoming request based on type (LaunchRequest, IntentRequest,
-// etc.) The JSON body of the request is provided in the event parameter.
-exports.handler = (event, context, callback) => {
-    try {
-        console.log(`event.session.application.applicationId=${event.session.application.applicationId}`);
-
-        /**
-         * Uncomment this if statement and populate with your skill's application ID to
-         * prevent someone else from configuring a skill that sends requests to this function.
-         */
-        /*
-        if (event.session.application.applicationId !== 'amzn1.echo-sdk-ams.app.[unique-value-here]') {
-             callback('Invalid Application ID');
-        }
-        */
-
-        if (event.session.new) {
-            onSessionStarted({
-                requestId: event.request.requestId
-            }, event.session);
-        }
-
-        if (event.request.type === 'LaunchRequest') {
-            onLaunch(event.request,
-                event.session, (sessionAttributes, speechletResponse) => {
-                    callback(null, buildResponse(sessionAttributes, speechletResponse));
-                });
-        } else if (event.request.type === 'IntentRequest') {
-            onIntent(event.request,
-                event.session, (sessionAttributes, speechletResponse) => {
-                    callback(null, buildResponse(sessionAttributes, speechletResponse));
-                });
-        } else if (event.request.type === 'SessionEndedRequest') {
-            onSessionEnded(event.request, event.session);
-            callback();
-        }
-    } catch (err) {
-        callback(err);
     }
-};
+);
+// connect to lambda
+exports.handler = app.lambda();
