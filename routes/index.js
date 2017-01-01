@@ -83,7 +83,7 @@ module.exports = function(app) {
 
         var canvas_account = req.session.user.user_data.canvas_account;
 
-        var user = req.session.User;
+        var user = new User(req.session.CanvasUser);
         user.getAccount(access_token, function(cUser) {
             var cUser = JSON.parse(cUser);
             if (!isEmptyObject(cUser.errors) && cUser.errors[0].message === "Invalid access token.") {
@@ -114,6 +114,7 @@ module.exports = function(app) {
                     account: cUser
                 }
 
+                req.session.CanvasUser.user_data.canvas_account = req.session.user.user_data.canvas_account;
 
                 storage.update(amz_account, "user_data.canvas_account", req.session.user.user_data.canvas_account, function(user) {
                     if (user !== false) {

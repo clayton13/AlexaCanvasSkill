@@ -65,8 +65,10 @@ var storage = (function() {
                     Item: {
                         "userID": amz_account.user_id,
                         "user_data": {
-                            "amz_account": amz_account
-                        }
+                            "amz_account": amz_account,
+                            "canvas_account": {}
+                        },
+                        'nicknames': {}
                     }
                 };
 
@@ -75,12 +77,8 @@ var storage = (function() {
                         console.log(err);
                         callback(false);
                     } else {
-                        console.log("> " + JSON.stringify(data, null, ' '));
-                        if (!isEmptyObject(data.Item)) {
-                            callback(data)
-                        } else {
-                            callback(false)
-                        }
+                        //put user not returning newly created user correctly, just return orig Item.
+                        callback(params.Item)
                     }
                 });
             } catch (error) {

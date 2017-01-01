@@ -10,6 +10,7 @@ var lex = require('letsencrypt-express').create({
     approveDomains: ['canvasskill.tk', "www.canvasskill.tk"],
 
 })
+var User = require('./tools/CanvasUser');
 
 // handles acme-challenge and redirects to https
 require('http').createServer(lex.middleware(require('redirect-https')())).listen(8080, function() {
@@ -51,6 +52,7 @@ app.use(function(req, res, next) {
 
 
 
+    req.CanvasUser = req.session.CanvasUser;
     req.user = user;
 
     res.locals.session = req.session;
@@ -155,24 +157,13 @@ app.get('/welcome', function(_req, _res) {
             var amz_account = JSON.parse(chunk)
 
 
-            storage.getUser(amz_account, function(exists) {
-                if (exists !== false) {
+            storage.getOrPutUser(amz_account, function(exists) {
                     _req.session.user = exists;
-
-                    // console.log("got callback " + exists + " and " + JSON.stringify(req.session.user));
+                    _req.session.CanvasUser = new User(exists);
                     _res.redirect('/dashboard');
+
                 } else {
-                    storage.putUser(amz_account, function(exists) {
-                        if (exists !== false) {
-                            _req.session.user = exists;
-
-                            // console.log("got callback " + exists + " and " + JSON.stringify(req.session.user));
-                            _res.redirect('/dashboard');
-                        } else {
-                            _res.redirect('/?bad_login');
-                        }
-                    })
-
+                    _res.redirect('/?bad_login');
                 }
             })
 
