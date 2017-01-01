@@ -1,0 +1,21 @@
+user
+	amz_id
+	canv_id
+	user_data
+		amz_account
+			name
+			id
+			email
+		timestamp
+			lastUpdate
+			lastSkillUse
+			lastWebsiteUse
+			creationDate
+	canvas
+		account
+			token
+			secrettoken
+			
+		courses
+
+		course id to descriptions

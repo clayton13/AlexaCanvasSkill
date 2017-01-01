@@ -1,21 +1,24 @@
 'use strict';
 var AWS = require("aws-sdk");
-AWS.config.loadFromPath('./config.json');
+//"C:/Users/Clayton/Desktop/GitHub/AlexaCanvasSkill" +
+//https://s3.amazonaws.com/canvasskillbucket/myzip.zip
+AWS.config.loadFromPath(__dirname + '/config.json');
 var table = "CanvasData";
+var globals = require('./globals');
+var https = require('https');
+var querystring = require('querystring');
 
 // AWS.config.update({endpoint: "https://dynamodb.us-east-1.amazonaws.com"});
 var ep = new AWS.Endpoint('arn:aws:dynamodb:us-east-1:708578975317:table/CanvasData');
-// AWS.config.update({
-//     // aws_access_key_id: 'AKIAIQEVTQGG7LOXXPBA',
-//     // aws_secret_access_key: '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',
-//     // region: "us-east-1",
-//     endpoint:ep // "arn:aws:dynamodb:us-east-1:708578975317:table/CanvasData"
-// });
+
 
 var storage = (function() {
     // var dynamodb = new AWS.DynamoDB.DocumentClient(); //new AWS.DynamoDB({apiVersion: '2012-08-10'}); 
 
     return {
+        getAmazon: function(token, callback) {
+
+        },
         //Fetches user from database
         //Returns
         //  User if exists
@@ -36,8 +39,9 @@ var storage = (function() {
                         callback(false);
                     } else {
                         console.log("> " + JSON.stringify(data));
-                        if (isEmptyObject(data)) {
-                            callback(data)
+
+                        if (!isEmptyObject(data.Item)) {
+                            callback(data.Item)
                         } else {
                             callback(false)
                         }
@@ -72,7 +76,7 @@ var storage = (function() {
                         callback(false);
                     } else {
                         console.log("> " + JSON.stringify(data, null, ' '));
-                        if (isEmptyObject(data)) {
+                        if (!isEmptyObject(data.Item)) {
                             callback(data)
                         } else {
                             callback(false)
@@ -83,6 +87,19 @@ var storage = (function() {
                 console.log("TRY Catch " + error)
                 callback(false)
             }
+        },
+
+        getOrPutUser: function(amz_account, callback) {
+            var _this = this;
+            _this.getUser(amz_account, function(exists) {
+                if (exists !== false) {
+                    callback(exists)
+                } else {
+                    _this.putUser(amz_account, function(exists) {
+                        callback(exists)
+                    })
+                }
+            })
         },
         //Updates a given key
         //TODO: optimize for mulitple updates
@@ -102,7 +119,7 @@ var storage = (function() {
             var attrs = key.split(".");
             var uExpression = "";
             var attrNames = {}
-            for (var i = 0; i < 3; i++) {
+            for (var i = 0; i < attrs.length; i++) {
                 if (i != 0)
                     uExpression += "."
                 uExpression += "#key" + i;
@@ -120,86 +137,125 @@ var storage = (function() {
                 ExpressionAttributeValues: {
                     ":val": value
                 },
-                ReturnValues: "UPDATED_NEW"
+                ReturnValues: "ALL_NEW", //UPDATED_NEW"
             };
             docClient.update(params, function(err, data) {
                 if (err) {
-                    console.log(err);
+                    // console.log(err);
                     callback(false);
                 } else {
-                    console.log("Update> " + JSON.stringify(data, null, ' '));
-                    if (isEmptyObject(data)) {
-                        callback(data)
+                    console.log("Update> " + JSON.stringify(data.Attributes, null, ' '));
+                    if (!isEmptyObject(data.Attributes)) {
+                        callback(data.Attributes)
                     } else {
                         callback(false)
                     }
+
+                    // if (isEmptyObject(data.Attributes)) {
+                    //     callback(data.Attributes)
+                    // } else {
+                    //     console.log("\n\n\n-----------------------------")
+                    //     console.log(isEmptyObject(data.Attributes))
+                    //     console.log(JSON.stringify(data.Attributes, null, ' '))
+                    //     callback(false)
+                    // }
                 }
             });
         },
-        loadGame: function(session, callback) {
-            try {
-                AWS.config.update({
-                    //   region: "us-west-2",
-                    //   endpoint: "http://localhost:8000"
+        jsonFix: function(json) {
+            return json.replace(/([\[:])?(\d{10,})([,\}\]])/g, "$1\"$2\"$3");
+        },
+        //Makes a put request to canvas
+        makePUT: function(path, data, token, callback) {
+            var options = {
+                host: globals.BASE_URL,
+                headers: {
+                    "Authorization": "Bearer " + token,
+                    // 'content-length': 150,
+                    'content-type': 'application/x-www-form-urlencoded',
+                    'Expect': '100-continue',
+                    // 'User-Agent': 'curl/7.38.0',
+                    'Accept': '*/*',
+                    //Boy I really hate this stinking line of code, apparently it makes the world
+                    //  of differnce in making PUT requests from node. On stackoverflow I did not
+                    //  see one answer refrencing this...well that was 3+hours down the toilet.
+                    //  Lesson learned....READ THE DOCS!
+                    //  "It's suggested to use the ['Transfer-Encoding', 'chunked'] header line when creating the request."
+                    'Transfer-Encoding': 'chunked'
+                },
+                path: path,
+                method: 'PUT'
+            };
+            var req = https.request(options, function(res) {
+                // console.log('STATUS: ' + res.statusCode);
+                // console.log('HEADERS: ' + JSON.stringify(res.headers));
+                res.setEncoding('utf8');
+                var data = ""
+                res.on('data', function(chunk) {
+                    data += chunk;
+                    // console.log('BODY: ' + chunk);
                 });
+                res.on("end", function() {
+                    data = storage.jsonFix(data)
+                    callback(data);
+                    res.removeAllListeners('data');
+                })
+            });
 
-                var dynamodb = new AWS.DynamoDB.DocumentClient(); //new AWS.DynamoDB();
+            req.on('error', function(e) {
+                console.log('-------\nERROR WITH REQUEST-------\n' + e.message);
+            });
 
-                // var params = {
-                //     TableName : "Movies",
-                //     KeySchema: [       
-                //         { AttributeName: "year", KeyType: "HASH"},  //Partition key
-                //         { AttributeName: "title", KeyType: "RANGE" }  //Sort key
-                //     ],
-                //     AttributeDefinitions: [       
-                //         { AttributeName: "year", AttributeType: "N" },
-                //         { AttributeName: "title", AttributeType: "S" }
-                //     ],
-                //     ProvisionedThroughput: {       
-                //         ReadCapacityUnits: 10, 
-                //         WriteCapacityUnits: 10
-                //     }
-                // };
+            req.write(data);
+            req.end();
+        },
 
-                // dynamodb.createTable(params, function(err, data) {
-                //     if (err) {
-                //         console.error("Unable to create table. Error JSON:", JSON.stringify(err, null, 2));
-                //     } else {
-                //         console.log("Created table. Table description JSON:", JSON.stringify(data, null, 2));
-                //     }
-                // });
-                //  } catch (error) {
-                //     context.fail("Caught: " + error);
-                //   }
-                var table = "CanvasData";
+        makeGET: function(path, data, token, callback) {
+            var options = {
+                host: globals.BASE_URL,
+                headers: {
+                    "Authorization": "Bearer " + token,
+                    // 'content-length': 150,
+                    'content-type': 'application/x-www-form-urlencoded',
+                    'Expect': '100-continue',
+                    // 'User-Agent': 'curl/7.38.0',
+                    'Accept': '*/*',
+                    //Boy I really hate this stinking line of code, apparently it makes the world
+                    //  of differnce in making PUT requests from node. On stackoverflow I did not
+                    //  see one answer refrencing this...well that was 3+hours down the toilet.
+                    //  Lesson learned....READ THE DOCS!
+                    //  "It's suggested to use the ['Transfer-Encoding', 'chunked'] header line when creating the request."
+                    'Transfer-Encoding': 'chunked'
+                },
+                path: path,
+                method: 'GET',
 
-                var year = 2015;
-                var title = "The Big New Movie";
-                var x = new Object()
-                x.var = "hello";
-                x.var2 = "world";
-                x.list = ["h", "e", "l", "l", "o"];
-
-                var params = {
-                    TableName: table,
-                    Item: {
-                        "userID": "123231412",
-                        "test": "hello",
-                        "data": x
-                    }
-                };
-                console.log("Adding a new item...");
-                dynamodb.put(params, function(err, data) {
-                    if (err) {
-                        console.error("Unable to add item. Error JSON:", JSON.stringify(err, null, 2));
-                    } else {
-                        console.log("Added item:", JSON.stringify(data, null, 2));
-                    }
+            };
+            var req = https.request(options, function(res) {
+                // console.log('STATUS: ' + res.statusCode);
+                // console.log('HEADERS: ' + JSON.stringify(res.headers));
+                res.setEncoding('utf8');
+                var data = ""
+                res.on('data', function(chunk) {
+                    data += chunk;
+                    // console.log('BODY: ' + chunk);
                 });
-            } catch (error) {
-                console.log(error)
-                    // context.fail("Caught: " + error);
+                res.on("end", function() {
+                    data = storage.jsonFix(data)
+                    callback(data);
+                    res.removeAllListeners('data');
+                })
+            });
+
+            req.on('error', function(e) {
+                console.log('-------\ERROR WITH REQUEST-------\n' + e.message);
+            });
+
+            if (data) {
+                req.write(querystring.stringify(data));
             }
+            // console.log(req._body)
+            req.end();
         }
     }
 })();
@@ -207,5 +263,19 @@ module.exports = storage;
 
 // storage.loadGame(null, null)
 function isEmptyObject(obj) {
-    return !Object.keys(obj).length;
+    if ((typeof(obj) !== 'undefined') && (obj !== null)) {
+        return !Object.keys(obj).length;
+    } else
+        return true;
 }
+
+
+
+
+// var x = {
+//     "userID": "123231412",
+//     "test": "hello"
+// }
+// storage.getUser(amz_account, function(u) {
+//     var user = new User(u)
+// });

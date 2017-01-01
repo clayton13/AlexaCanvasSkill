@@ -1,0 +1,17 @@
+<div class="card">
+    <div class="card-header" role="tab" data-toggle="collapse" data-target="#collapse<%= id %>">
+        <h5 class="mb-0 courseName"><%= courseName %></h5>
+        <i class="glyphicon glyphicon-refresh doRefresh"></i>
+    </div> <!--  add in to show -->
+    <div id="collapse<%= id %>" class="collapse" role="tabpanel" aria-labelledby="heading<%= id %>">
+        <i class="glyphicon glyphicon-plus addNickname" style="float: right; top: 5px; right: 5px;"></i>
+        <i class="glyphicon glyphicon-trash removeNicknames" style="float: right; top: 6px; right: 12px;"></i>
+        <div class="card-block">
+            <!-- <div class="container"> -->
+                <br>
+                <div class="col-xs-12 courseNicknames" data-toggle="buttons">
+                </div>
+            <!-- </div> -->
+        </div>
+    </div>
+</div>

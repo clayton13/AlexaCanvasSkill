@@ -16,13 +16,16 @@ var options = {
     minMatchCharLength: 1,
     keys: [{
         name: 'nickname',
-        weight: 0.4
-    }, {
-        name: 'meta.title',
         weight: 0.35
     }, {
+        name: 'nicknames',
+        weight: 0.30
+    }, {
+        name: 'meta.title',
+        weight: 0.20
+    }, {
         name: 'meta.rawInfo',
-        weight: 0.25
+        weight: 0.15
     }]
 };
 module.exports = search;
@@ -31,6 +34,8 @@ function search(courses, query) {
     var fuse = new Fuse(courses, options); // "list" is the item array
 
     var result = fuse.search(query);
+    // console.log(result)
+
     var match;
     for (match of result) {
         if (match.score < .3) {
@@ -38,6 +43,7 @@ function search(courses, query) {
             return match.item;
         } else {
             console.log("Need clarification for " + query);
+            // console.log(result[0].score)
             return result;
         }
     }

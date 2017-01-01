@@ -1,0 +1,31 @@
+<div class="well bs-component" style="position: relative">
+    <div class="alert alert-dismissible alert-success canvasverifed" style="display:none">
+        <button type="button" class="close" data-dismiss="alert">&times;</button>
+        <div style="width: 80%;height: 80%; margin: 0 auto;">
+            <h4>Canvas Access Token Verified</h4>
+            <br><%= account.name || account.short_name %>
+            <br><%= account.login_id || "" %>     
+            <br><%= account.primary_email || "" %>
+        </div>
+        <a href="#" class="btn btn-default closeVerifed" data-dismiss="alert">Modify Access Token</a>
+    </div>
+    <form class="form-horizontal canvasAccess">  <!-- action="/api/addCanvasToken/" method="POST" -->
+        <fieldset>
+            <legend>Canvas Access</legend>
+            <div class="form-group">
+                <label for="canvasToken" class="col-lg-2 control-label">Canvas Access Token</label>
+                <div class="col-lg-10">
+                    <input type="text" class="form-control" id="canvasToken" name="access_token" placeholder="Personalized Canvas Access Token" autocomplete="off" style="background-repeat: no-repeat; background-attachment: scroll; background-size: 16px 18px; background-position: 98% 50%; cursor: auto;" value="<%= access_token %>">
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-lg-10 col-lg-offset-2">
+                    <button type="reset" class="btn btn-default">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                    <p class="text-warning pull-right" style="display:none">Invalid Access Token</p>
+                    <p class="text-success pull-right" style="display:none">Valid Access Token</p>
+                </div>
+            </div>
+        </fieldset>
+    </form>
+</div>

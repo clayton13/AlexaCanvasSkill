@@ -1,0 +1,90 @@
+<%
+var userLoggedIn = false;
+var name = "Visitor"
+var access_token = ""
+if(!isEmptyObject(session.user)){
+  if(!isEmptyObject(session.user.user_data.canvas_account)){
+    access_token = session.user.user_data.canvas_account.access_token;
+  }
+}
+// console.log(JSON.stringify(session))
+
+//Determine current page from url and return active for navbar
+function doActive(url){
+  if(stuff.query.toString() === url){
+    console.log("match")
+      return "active"
+  }
+}
+function isEmptyObject(obj) {
+    if ((typeof(obj) !== 'undefined') && (obj !== null)) {
+        return !Object.keys(obj).length;
+    } else
+        return true;
+}
+
+
+%>
+
+<!DOCTYPE html>
+<html lang="en">
+<% include ../partials/head %>
+
+  <body>
+    <% include ../partials/nav %>
+    <div class="container">
+      <br>
+      <% if(access_token === ""){ %>
+        <div class="alert alert-dismissible alert-danger">
+            <!-- <button type="button" class="close" data-dismiss="alert">&times;</button> -->
+            <h4>No Canvas Account</h4>
+            You need to link your Canvas account.
+        </div>
+      <% } %>
+
+
+
+
+
+      <div class="alert alert-dismissible alert-warning">
+          <button type="button" class="close" data-dismiss="alert">&times;</button>
+          <h4>Are you linked?</h4>
+          <p>Have you linked with Alexa yet? If not, <a href="http://alexa.amazon.com/spa/index.html#skills/beta/amzn1.ask.skill.7d33a188-6da6-4d58-aa7b-840d678adc10" target="_blank" class="alert-link">link to your Alexa Account</a> before usuage.</p>
+      </div>
+      <br>
+
+<div id="courseNicknames"></div>
+      
+
+<div id="tokenView"></div>
+
+
+<br>
+
+<div class="modal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 class="modal-title">Modal title</h4>
+      </div>
+      <div class="modal-body">
+        <p>One fine body…</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary">Save changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- //https://codepen.io/anon/pen/jVRyza -->
+</div>
+
+    <% include ../partials/footer %>
+
+    <script data-main="/js/app/main" src="/require.js"></script>
+   
+  </body>
+</html>

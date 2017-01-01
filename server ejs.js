@@ -3,24 +3,77 @@ var https = require('https');
 var bodyParser = require('body-parser');
 var querystring = require('querystring');
 var storage = require('./storage');
-var lex = require('letsencrypt-express').create({
-    server: 'https://acme-v01.api.letsencrypt.org/directory',
-    email: 'clwht687@gmail.com',
-    agreeTos: true,
-    approveDomains: ['canvasskill.tk', "www.canvasskill.tk"],
+// var routes =
+// var lex = require('letsencrypt-express').create({
+//     server: 'https://acme-v01.api.letsencrypt.org/directory',
+//     email: 'clwht687@gmail.com',
+//     agreeTos: true,
+//     approveDomains: ['canvasskill.tk', "www.canvasskill.tk"],
 
-})
+// })
 
 // handles acme-challenge and redirects to https
-require('http').createServer(lex.middleware(require('redirect-https')())).listen(8080, function() {
-    console.log("Listening for ACME http-01 challenges on", this.address());
-});
-
+// require('http').createServer().listen(8000, function() {
+//     console.log("Listening for ACME http-01 challenges on", this.address());
+// });
+var session = require('express-session');
 var express = require('express');
 var app = express();
+
+app.use(bodyParser.json()); // for parsing application/json
 app.use(bodyParser.urlencoded({
     extended: true
 }));
+app.use(session({
+    name: 'session',
+    secret: 'sdakajsdflasdkfjnaskldasdfljasasdf',
+    resave: false,
+    saveUninitialized: true,
+    cookie: {
+        secure: false
+    }
+    // duration: 30 * 60 * 1000,
+    // activeDuration: 5 * 60 * 1000,
+}));
+app.use(function(req, res, next) {
+    var user = req.session.user;
+    if (!user) {
+        user = req.session.user = {}
+    }
+
+    console.log("\n" + JSON.stringify(req.session))
+
+    // console.log(req.originalUrl)
+    // res.locals.stuff = {
+    //     query: req.params,
+    //     url: req.originalUrl
+    // }
+
+
+    req.CanvasUser = req.session.CanvasUser;
+    req.user = user;
+
+    res.locals.session = req.session;
+
+
+    res.locals.stuff = {
+        query: req.path,
+        url: req.originalUrl //last part of the url *.com/folder/url
+    }
+
+    console.log("\n" + JSON.stringify(res.locals))
+    next()
+
+});
+
+function requireLogin(req, res, next) {
+    console.log(JSON.stringify(req.session))
+    if (isEmptyObject(req.session.user)) {
+        res.redirect('/');
+    } else {
+        next();
+    }
+};
 
 app.all('*', function(req, res, next) {
     console.log("Param " + JSON.stringify(req.params));
@@ -69,24 +122,20 @@ app.post('/auth', function(req, _res) {
 });
 
 app.use("/", function(req, res, next) {
-    if (req.query.client_id === "amzn1.application-oa2-client.f923b7a941514fa390dfbff4be669a5e") {
-        var data = querystring.stringify({
-            state: req.query.state,
-            // access_token: 'var',
-            // token_type: 'Bearer',
-            // response_type: 'token',
-            code: "adsfasdfasdf"
-        })
-        console.log(req.query.redirect_uri + "/&" + data)
-        res.redirect(req.query.redirect_uri + "/&" + data);
-    } else {
-        next()
-    }
+    next()
 })
-app.use(express.static('public/'))
 
+app.use('/node_modules', express.static(process.cwd() + '/node_modules'));
+
+require('./routes/index.js')(app);
+
+// app.use(express.static('public/'))
+app.use('/', express.static(process.cwd() + '/public'));
+
+app.set('view engine', 'ejs');
 // app.use('/welcome', express.static('public/welcome'))
 app.get('/welcome', function(req, _res) {
+
     console.log(req.query);
     var token = req.query.access_token;
 
@@ -133,30 +182,11 @@ app.get('/welcome', function(req, _res) {
     // res.sendStatus(200);
 });
 
-// app: require('express')().use('/')
-//app: (require('express')().static('/'))
-
-var AmazonTokenStrategy = require('passport-amazon-token');
-var passport = require("passport")
-passport.use(new AmazonTokenStrategy({
-    clientID: "amzn1.application-oa2-client.f923b7a941514fa390dfbff4be669a5e",
-    clientSecret: "069d25f6a7552612d8fd0b7e9ad518ca18729348dd7426b707c436416fe7a47e",
-    passReqToCallback: true
-}, function(req, accessToken, refreshToken, profile, next) {
-    console.log(profile)
-    return next(error, user);
-    User.findOrCreate({
-        'amazon.id': profile.id
-    }, function(error, user) {
-        console.log(user)
-        return next(error, user);
-    });
-}));
-
-app.get('/auth/amazon', passport.authenticate('amazon-token'));
-
 
 // handles your app
-require('https').createServer(lex.httpsOptions, lex.middleware(app)).listen(8443, function() {
-    console.log("Listening for ACME tls-sni-01 challenges and serve app on", this.address());
+// require('https').createServer(lex.httpsOptions, lex.middleware(app)).listen(8443, function() {
+//     console.log("Listening for ACME tls-sni-01 challenges and serve app on", this.address());
+// });
+app.listen(8000, function() {
+    console.log('Server listening on port ' + 8000 + '...');
 });
