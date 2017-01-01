@@ -81,11 +81,8 @@ define([
             console.log(this.model.attributes.nicknames)
             var index = this.Nicknames.indexOf(el)
             if (index == this.Nicknames.models.length - 1) {
-                el.trigger("close")
                 this.addNickname()
             } else {
-                el.trigger("close")
-
                 this.Nicknames.models[index + 1].trigger("open")
             }
         },

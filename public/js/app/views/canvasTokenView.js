@@ -99,10 +99,10 @@ define([
             if (this.model.changedAttributes()) {
                 this.model.save();
             } else {
-                console.log("no changes")
-                this.model.set("valid", true)
-                this.render()
-
+                console.log("no changes");
+                // this.model.set("valid", true)
+                // this.render()
+                this.model.fetch();
             }
         },
         doReset: function() {

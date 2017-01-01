@@ -158,6 +158,7 @@ app.get('/welcome', function(_req, _res) {
 
 
             storage.getOrPutUser(amz_account, function(exists) {
+                if (exists !== false) {
                     _req.session.user = exists;
                     _req.session.CanvasUser = new User(exists);
                     _res.redirect('/dashboard');
