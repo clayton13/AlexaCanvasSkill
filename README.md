@@ -12,6 +12,8 @@ The website itself is a node server serving a mixture of [ejs]( https://github.c
 
 Instructure Canvas has a fabulous API located [here](https://canvas.instructure.com/doc/api/index.html), the API has many examples and support. 
 
+## Feedback received from Amazon [here](/CHANGELOG.md)
+
 ## Skill 
 The actual skill was made using [Alexia](https://github.com/Accenture/alexia), it provided a good framework to begin developing the skill. The way the skill works is when a user makes a request, it checks to see if they have linked the skill in Alexa app; if they have, it looks them up in the [Database](#database). From the database a `CanvasUser` is returned, an object containing all the methods to get `Courses` and `Assignments`. 
 
