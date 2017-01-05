@@ -103,11 +103,11 @@ function getCourses() {
     };
 
     // if there is already course data use that else fetch it
-    if (typeof this.Assignments != "undefined" && this.Assignments != null && this.Assignments.length > 0) {
-        console.log("Reusing assignment data");
+    if (typeof this.courses != "undefined" && this.courses != null && this.courses.length > 0) {
+        console.log("Reusing course data");
         return Promise.resolve(this.courses);
     } else {
-        console.log("Fetching assignment data");
+        console.log("Fetching course data");
         return storage.makeGET("/api/v1/courses/", params, this.token).bind(this).then(courses => {
             console.log("GOT COURSES")
 
@@ -172,26 +172,22 @@ function matchNicknames() {
 }
 User.prototype.matchNicknames = matchNicknames;
 
-function findCourse(query, callback) {
+function findCourse(query) {
     var doSearch = function(courses, query) {
         var result = courseSearch(courses, query);
 
         if (Array.isArray(result)) {
             console.log("Not a concrete match found");
-            callback(result);
+            return result;
         } else {
-            callback(result);
+            return result;
         }
     }.bind(this);
 
-    //if there is already course data use that else fetch it
-    if (typeof this.courses != "undefined" && this.courses != null && this.courses.length > 0) {
-        doSearch(this.courses, query);
-    } else {
-        this.getCourses().then(function() {
-            doSearch(this.courses, query);
-        });
-    }
+    return this.getCourses().then(function(courses) {
+        return doSearch(courses, query);
+    });
+
 }
 User.prototype.findCourse = findCourse;
 
