@@ -40,6 +40,8 @@
     "passport-amazon-token": "^2.1.0",
     "querystring": "^0.2.0",
     "redirect-https": "^1.1.1",
+    "request": "^2.79.0",
+    "request-promise": "^4.1.1",
     "requirejs": "^2.1.15",
     "requirejs-text": "^2.0.12",
     "underscore": "^1.7.0"

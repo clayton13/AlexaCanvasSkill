@@ -1,13 +1,16 @@
 'use strict';
 var AWS = require("aws-sdk");
+var Promise = require("bluebird");
 //"C:/Users/Clayton/Desktop/GitHub/AlexaCanvasSkill" +
 //https://s3.amazonaws.com/canvasskillbucket/myzip.zip
 AWS.config.loadFromPath(__dirname + '/config.json');
+AWS.config.setPromisesDependency(require('bluebird'));
 var table = "CanvasData";
 var globals = require('./globals');
 var https = require('https');
 var querystring = require('querystring');
 
+var rp = require('request-promise');
 // AWS.config.update({endpoint: "https://dynamodb.us-east-1.amazonaws.com"});
 var ep = new AWS.Endpoint('arn:aws:dynamodb:us-east-1:708578975317:table/CanvasData');
 
@@ -16,92 +19,79 @@ var storage = (function() {
     // var dynamodb = new AWS.DynamoDB.DocumentClient(); //new AWS.DynamoDB({apiVersion: '2012-08-10'}); 
 
     return {
-        getAmazon: function(token, callback) {
-
+        getAmazonAccount: function(token) {
+            var options = {
+                baseUrl: 'https://api.amazon.com',
+                uri: '/user/profile?access_token=' + token,
+                method: 'GET'
+            }
+            return rp(options).then(function(res) {
+                return JSON.parse(storage.jsonFix(res));
+            });
         },
         //Fetches user from database
         //Returns
         //  User if exists
         //  False if nonexistant
-        getUser: function(amz_account, callback) {
-            try {
-                var docClient = new AWS.DynamoDB.DocumentClient();
-                var params = {
-                    TableName: table,
-                    Key: {
-                        "userID": amz_account.user_id,
-                    }
-                };
-
-                docClient.get(params, function(err, data) {
-                    if (err) {
-                        console.log(err);
-                        callback(false);
-                    } else {
-                        console.log("> " + JSON.stringify(data));
-
-                        if (!isEmptyObject(data.Item)) {
-                            callback(data.Item)
-                        } else {
-                            callback(false)
-                        }
-                    }
-                });
-            } catch (error) {
-                console.log("TRY Catch " + error)
-                callback(false)
-            }
-        },
-        //Fetches user from database
-        //Returns
-        //  User if exists
-        //  False if nonexistant
-        putUser: function(amz_account, callback) {
-            try {
-                var docClient = new AWS.DynamoDB.DocumentClient();
-
-                var params = {
-                    TableName: table,
-                    Item: {
-                        "userID": amz_account.user_id,
-                        "user_data": {
-                            "amz_account": amz_account,
-                            "canvas_account": {}
-                        },
-                        'nicknames': {}
-                    }
-                };
-
-                docClient.put(params, function(err, data) {
-                    if (err) {
-                        console.log(err);
-                        callback(false);
-                    } else {
-                        //put user not returning newly created user correctly, just return orig Item.
-                        callback(params.Item)
-                    }
-                });
-            } catch (error) {
-                console.log("TRY Catch " + error)
-                callback(false)
-            }
-        },
-
-        getOrPutUser: function(amz_account, callback) {
-            var _this = this;
-            _this.getUser(amz_account, function(exists) {
-                if (exists !== false) {
-                    callback(exists)
-                } else {
-                    _this.putUser(amz_account, function(exists) {
-                        callback(exists)
-                    })
+        getUser: function(amz_account) {
+            var docClient = new AWS.DynamoDB.DocumentClient();
+            var params = {
+                TableName: table,
+                Key: {
+                    "userID": amz_account.user_id,
                 }
-            })
+            };
+
+            return docClient.get(params).promise().then(data => {
+                if (!isEmptyObject(data.Item)) {
+                    return data.Item;
+                } else {
+                    return false;
+                }
+            });
+        },
+        //Fetches user from database
+        //Returns
+        //  User if exists
+        //  False if nonexistant
+        putUser: function(amz_account) {
+            var docClient = new AWS.DynamoDB.DocumentClient();
+
+            var params = {
+                TableName: table,
+                Item: {
+                    "userID": amz_account.user_id,
+                    "user_data": {
+                        "amz_account": amz_account,
+                        "canvas_account": {},
+                        "timestamp": {}
+                    },
+                    'nicknames': {}
+                }
+            };
+
+            return docClient.put(params).promise().then(data => {
+                //put user not returning newly created user correctly, just return orig Item.
+                return params.Item;
+            });
+        },
+        //Get user if exits otherwise create one
+        getOrPutUser: function(amz_account) {
+            return this.getUser(amz_account).then(exists => {
+                if (exists !== false) {
+                    console.log("Got user");
+                    return exists;
+                } else {
+                    console.log("Created user");
+                    return this.putUser(amz_account).then(exists => {
+                        return exists;
+                    });
+                }
+            });
         },
         //Updates a given key
         //TODO: optimize for mulitple updates
-        update: function(amz_account, key, value, callback) {
+        update: function(amz_account, key, value) {
             //ie data.timestamp.lastUpdate
 
             var x = {
@@ -119,9 +109,9 @@ var storage = (function() {
             var attrNames = {}
             for (var i = 0; i < attrs.length; i++) {
                 if (i != 0)
-                    uExpression += "."
+                    uExpression += ".";
                 uExpression += "#key" + i;
-                attrNames["#key" + i] = attrs[i]
+                attrNames["#key" + i] = attrs[i];
             }
 
             var docClient = new AWS.DynamoDB.DocumentClient();
@@ -137,26 +127,13 @@ var storage = (function() {
                 },
                 ReturnValues: "ALL_NEW", //UPDATED_NEW"
             };
-            docClient.update(params, function(err, data) {
-                if (err) {
-                    // console.log(err);
-                    callback(false);
-                } else {
-                    console.log("Update> " + JSON.stringify(data.Attributes, null, ' '));
-                    if (!isEmptyObject(data.Attributes)) {
-                        callback(data.Attributes)
-                    } else {
-                        callback(false)
-                    }
 
-                    // if (isEmptyObject(data.Attributes)) {
-                    //     callback(data.Attributes)
-                    // } else {
-                    //     console.log("\n\n\n-----------------------------")
-                    //     console.log(isEmptyObject(data.Attributes))
-                    //     console.log(JSON.stringify(data.Attributes, null, ' '))
-                    //     callback(false)
-                    // }
+            return docClient.update(params).promise().then(data => {
+                console.log("Update> ", data.Attributes);
+                if (!isEmptyObject(data.Attributes)) {
+                    return data.Attributes;
+                } else {
+                    return false;
                 }
             });
         },
@@ -164,9 +141,9 @@ var storage = (function() {
             return json.replace(/([\[:])?(\d{10,})([,\}\]])/g, "$1\"$2\"$3");
         },
         //Makes a put request to canvas
-        makePUT: function(path, data, token, callback) {
+        makePUT: function(path, data, token) {
             var options = {
-                host: globals.BASE_URL,
+                baseUrl: globals.BASE_URL,
                 headers: {
                     "Authorization": "Bearer " + token,
                     // 'content-length': 150,
@@ -181,36 +158,19 @@ var storage = (function() {
                     //  "It's suggested to use the ['Transfer-Encoding', 'chunked'] header line when creating the request."
                     'Transfer-Encoding': 'chunked'
                 },
-                path: path,
-                method: 'PUT'
-            };
-            var req = https.request(options, function(res) {
-                // console.log('STATUS: ' + res.statusCode);
-                // console.log('HEADERS: ' + JSON.stringify(res.headers));
-                res.setEncoding('utf8');
-                var data = ""
-                res.on('data', function(chunk) {
-                    data += chunk;
-                    // console.log('BODY: ' + chunk);
-                });
-                res.on("end", function() {
-                    data = storage.jsonFix(data)
-                    callback(data);
-                    res.removeAllListeners('data');
-                })
+                uri: path,
+                method: 'PUT',
+                form: data
+            }
+            return rp(options).then(function(res) {
+                // console.log(JSON.stringify(res));
+                return JSON.parse(storage.jsonFix(res));
             });
-
-            req.on('error', function(e) {
-                console.log('-------\nERROR WITH REQUEST-------\n' + e.message);
-            });
-
-            req.write(data);
-            req.end();
         },
 
-        makeGET: function(path, data, token, callback) {
+        makeGET: function(path, data, token) {
             var options = {
-                host: globals.BASE_URL,
+                baseUrl: globals.BASE_URL,
                 headers: {
                     "Authorization": "Bearer " + token,
                     // 'content-length': 150,
@@ -225,37 +185,20 @@ var storage = (function() {
                     //  "It's suggested to use the ['Transfer-Encoding', 'chunked'] header line when creating the request."
                     'Transfer-Encoding': 'chunked'
                 },
-                path: path,
+                uri: path,
                 method: 'GET',
-
-            };
-            var req = https.request(options, function(res) {
-                // console.log('STATUS: ' + res.statusCode);
-                // console.log('HEADERS: ' + JSON.stringify(res.headers));
-                res.setEncoding('utf8');
-                var data = ""
-                res.on('data', function(chunk) {
-                    data += chunk;
-                    // console.log('BODY: ' + chunk);
-                });
-                res.on("end", function() {
-                    data = storage.jsonFix(data)
-                    callback(data);
-                    res.removeAllListeners('data');
-                })
-            });
-
-            req.on('error', function(e) {
-                console.log('-------\ERROR WITH REQUEST-------\n' + e.message);
-            });
-
-            if (data) {
-                req.write(querystring.stringify(data));
+                useQuerystring: true,
+                qs: data
             }
-            // console.log(req._body)
-            req.end();
+
+
+            return rp(options).then(function(res) {
+                // console.log(JSON.stringify(res));
+                return JSON.parse(storage.jsonFix(res));
+            });
+
         }
-    }
+    };
 })();
 module.exports = storage;
 

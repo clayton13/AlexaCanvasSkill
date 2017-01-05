@@ -3,6 +3,7 @@
 var https = require('https');
 // var request = require("request");
 var globals = require('../globals');
+var CustomError = require('../customerror');
 
 var fs = require('fs');
 var courseSearch = require("./courseSearch");
@@ -52,7 +53,7 @@ Assignment.prototype.getGrade = function() {
         }
     } else {
         //Not graded/not a factored in score
-        return "This assignment is not for credit";
+        return false; //"This assignment is not for credit";
         // return new CustomError('This assignment is not for credit', 42);
     }
 
