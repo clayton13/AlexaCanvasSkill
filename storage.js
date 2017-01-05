@@ -19,8 +19,15 @@ var storage = (function() {
     // var dynamodb = new AWS.DynamoDB.DocumentClient(); //new AWS.DynamoDB({apiVersion: '2012-08-10'}); 
 
     return {
-        getAmazon: function(token, callback) {
-
+        getAmazonAccount: function(token) {
+            var options = {
+                baseUrl: 'https://api.amazon.com',
+                uri: '/user/profile?access_token=' + token,
+                method: 'GET'
+            }
+            return rp(options).then(function(res) {
+                return JSON.parse(storage.jsonFix(res));
+            });
         },
         //Fetches user from database
         //Returns
@@ -122,7 +129,7 @@ var storage = (function() {
             };
 
             return docClient.update(params).promise().then(data => {
-                console.log("Update> " + JSON.stringify(data.Attributes, null, ' '));
+                console.log("Update> ", data.Attributes);
                 if (!isEmptyObject(data.Attributes)) {
                     return data.Attributes;
                 } else {

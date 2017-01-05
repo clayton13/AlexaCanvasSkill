@@ -42,7 +42,7 @@ app.use(function(req, res, next) {
         user = req.session.user = {}
     }
 
-    console.log("\n" + JSON.stringify(req.session))
+    // console.log("\n" + JSON.stringify(req.session))
 
     // console.log(req.originalUrl)
     // res.locals.stuff = {
@@ -63,7 +63,7 @@ app.use(function(req, res, next) {
         url: req.originalUrl //last part of the url *.com/folder/url
     }
 
-    console.log("\n" + JSON.stringify(res.locals))
+    // console.log("\n" + JSON.stringify(res.locals))
     next()
 
 });
@@ -136,65 +136,102 @@ app.use('/', express.static(process.cwd() + '/public'));
 
 app.set('view engine', 'ejs');
 // app.use('/welcome', express.static('public/welcome'))
-app.get('/welcome', function(_req, _res) {
-
-    console.log(_req.query);
-    var token = _req.query.access_token;
-
-    var req = https.request({
-        host: 'api.amazon.com',
-        path: '/user/profile?access_token=' + token,
-        method: "GET"
-    }, function(res) {
-        // console.log('STATUS: ' + res.statusCode);
-        // console.log('HEADERS: ' + JSON.stringify(res.headers));
-        res.setEncoding('utf8');
-        res.on('data', function(chunk) {
-            console.log('BODY: ' + chunk);
-            res.removeAllListeners('data');
-            // _res.redirect('/dashboard') //welcome.html?data=' + chunk);
-
-            var amz_account = JSON.parse(chunk)
 
 
-            storage.getOrPutUser(amz_account, function(exists) {
-                if (exists !== false) {
-                    _req.session.user = exists;
-                    _req.session.CanvasUser = new User(exists);
-                    _res.redirect('/dashboard');
+app.get('/welcome', function(req, res) {
 
-                } else {
-                    _res.redirect('/?bad_login');
-                }
-            })
+    console.log(req.query);
+    var token = req.query.access_token;
 
-            // storage.getUser(amz_account, function(exists){
-            //     console.log("got callback " + exists + " and " + JSON.stringify(this));
-            // })
-            // storage.putUser(amz_account, function(exists) {
-            //     console.log("got callback " + exists + " and " + JSON.stringify(this));
-            var date = new Date().toLocaleString('en-US', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: "numeric",
-                minute: "numeric",
-                timeZone: "America/New_York",
-                timeZoneName: "short"
-            });
 
-            storage.update(amz_account, "user_data.timestamp.lastUpdate", date, function() {});
-            storage.update(amz_account, "user_data.timestamp.creationDate", date, function() {});
-            // })
+    storage.getAmazonAccount(token).then(amz_account => {
+
+        storage.getOrPutUser(amz_account).then(exists => {
+            if (exists !== false) {
+                req.session.user = exists;
+                req.session.CanvasUser = new User(exists);
+                res.redirect('/dashboard');
+            } else {
+                res.redirect('/?bad_login');
+            }
+        })
+
+        var date = new Date().toLocaleString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: "numeric",
+            minute: "numeric",
+            timeZone: "America/New_York",
+            timeZoneName: "short"
         });
-    }).end();
 
+        storage.update(amz_account, "user_data.timestamp.lastUpdate", date);
+        storage.update(amz_account, "user_data.timestamp.creationDate", date);
 
-    // res.redirect('/welcome/welcome.html')
-
-    // res.sendStatus(200);
+    });
 });
+
+// app.get('/welcome', function(_req, _res) {
+
+//     console.log(_req.query);
+//     var token = _req.query.access_token;
+
+//     var req = https.request({
+//         host: 'api.amazon.com',
+//         path: '/user/profile?access_token=' + token,
+//         method: "GET"
+//     }, function(res) {
+//         // console.log('STATUS: ' + res.statusCode);
+//         // console.log('HEADERS: ' + JSON.stringify(res.headers));
+//         res.setEncoding('utf8');
+//         res.on('data', function(chunk) {
+//             console.log('BODY: ' + chunk);
+//             res.removeAllListeners('data');
+//             // _res.redirect('/dashboard') //welcome.html?data=' + chunk);
+
+//             var amz_account = JSON.parse(chunk)
+
+
+//             storage.getOrPutUser(amz_account, function(exists) {
+//                 if (exists !== false) {
+//                     _req.session.user = exists;
+//                     _req.session.CanvasUser = new User(exists);
+//                     _res.redirect('/dashboard');
+
+//                 } else {
+//                     _res.redirect('/?bad_login');
+//                 }
+//             })
+
+//             // storage.getUser(amz_account, function(exists){
+//             //     console.log("got callback " + exists + " and " + JSON.stringify(this));
+//             // })
+//             // storage.putUser(amz_account, function(exists) {
+//             //     console.log("got callback " + exists + " and " + JSON.stringify(this));
+//             var date = new Date().toLocaleString('en-US', {
+//                 weekday: 'long',
+//                 year: 'numeric',
+//                 month: 'long',
+//                 day: 'numeric',
+//                 hour: "numeric",
+//                 minute: "numeric",
+//                 timeZone: "America/New_York",
+//                 timeZoneName: "short"
+//             });
+
+//             storage.update(amz_account, "user_data.timestamp.lastUpdate", date, function() {});
+//             storage.update(amz_account, "user_data.timestamp.creationDate", date, function() {});
+//             // })
+//         });
+//     }).end();
+
+
+//     // res.redirect('/welcome/welcome.html')
+
+//     // res.sendStatus(200);
+// });
 
 // app: require('express')().use('/')
 //app: (require('express')().static('/'))

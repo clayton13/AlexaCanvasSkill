@@ -11,7 +11,6 @@ function isEmptyObject(obj) {
 }
 
 function requireLogin(req, res, next) {
-    console.log(JSON.stringify(req.session))
     if (isEmptyObject(req.session.user)) {
         res.redirect('/');
     } else {
@@ -46,20 +45,16 @@ module.exports = function(app) {
             email: 'clwht687@gmail.com'
         };
 
-        storage.getUser(amz_account, function(exists) {
-                if (exists !== false) {
-                    req.session.user = exists;
-                    req.session.CanvasUser = new User(exists)
-                        // console.log("got callback " + exists + " and " + JSON.stringify(req.session.user));
-                    res.redirect('/dashboard');
-                } else {
-                    res.redirect('/?bad_login');
-                }
-            })
-            // req.session.user = {
-            //     name: 'fuck'
-            // };
-
+        storage.getUser(amz_account).then(exists => {
+            if (exists !== false) {
+                req.session.user = exists;
+                req.session.CanvasUser = new User(exists)
+                    // console.log("got callback " + exists + " and " + JSON.stringify(req.session.user));
+                res.redirect('/dashboard');
+            } else {
+                res.redirect('/?bad_login');
+            }
+        });
     });
 
 
@@ -84,8 +79,7 @@ module.exports = function(app) {
         var canvas_account = req.session.user.user_data.canvas_account;
 
         var user = new User(req.session.CanvasUser);
-        user.getAccount(access_token, function(cUser) {
-            var cUser = JSON.parse(cUser);
+        user.getAccount(access_token).then(cUser => {
             if (!isEmptyObject(cUser.errors) && cUser.errors[0].message === "Invalid access token.") {
                 res.status(499).send('Invalid Canvas Access Token');
 
@@ -96,7 +90,7 @@ module.exports = function(app) {
                         access_token: access_token || "",
                         valid: false
                     }
-                    storage.update(amz_account, "user_data.canvas_account", canvas_account, function(user) {
+                    storage.update(amz_account, "user_data.canvas_account", canvas_account).then(user => {
                         if (user !== false) {
                             console.log("saved");
                             console.log(JSON.stringify(canvas_account))
@@ -116,7 +110,7 @@ module.exports = function(app) {
 
                 req.session.CanvasUser.user_data.canvas_account = req.session.user.user_data.canvas_account;
 
-                storage.update(amz_account, "user_data.canvas_account", req.session.user.user_data.canvas_account, function(user) {
+                storage.update(amz_account, "user_data.canvas_account", req.session.user.user_data.canvas_account).then(user => {
                     if (user !== false) {
                         console.log("saved");
                         console.log(JSON.stringify(canvas_account))
@@ -137,17 +131,6 @@ module.exports = function(app) {
                 res.status(200).json(canvas_account)
 
             }
-
-            // storage.update(amz_account, "user_data.canvas_account.access_token", access_token, function(user) {
-            //     if (user !== false) {
-            //         req.session.user = user.Attributes;
-
-            //         console.log(req.body.access_token)
-            //         res.redirect('/dashboard');
-            //     } else {
-            //         res.redirect('/dashboard');
-            //     }
-            // });
         });
     });
 
@@ -185,7 +168,7 @@ module.exports = function(app) {
         var amz_account = req.session.user.user_data.amz_account;
 
         console.log(JSON.stringify((amz_account)))
-        storage.update(amz_account, "user_data.canvas_account.access_token", access_token, function(user) {
+        storage.update(amz_account, "user_data.canvas_account.access_token", access_token).then(user => {
             if (user !== false) {
                 req.session.user = user.Attributes;
 
@@ -212,7 +195,7 @@ module.exports = function(app) {
             var access_token = req.session.user.user_data.canvas_account.access_token;
 
             var nicknames2 = [];
-            user.getCourses(function(courses) {
+            user.getCourses().then(courses => {
                 console.log("got courses")
                 courses.forEach(function(course) {
 
@@ -258,7 +241,7 @@ module.exports = function(app) {
         console.log("Id: " + req.params.id)
 
         var amz_account = req.session.user.user_data.amz_account;
-        storage.update(amz_account, "nicknames." + req.params.id, JSON.stringify(req.body.nicknames), function(user) {
+        storage.update(amz_account, "nicknames." + req.params.id, JSON.stringify(req.body.nicknames)).then(user => {
 
             if ((typeof(user) !== 'undefined') && (user !== null)) {
                 req.session.user = user;
@@ -295,8 +278,6 @@ module.exports = function(app) {
 
 
     app.use('/dashboard', requireLogin, function(req, res) {
-        console.log("Name " + JSON.stringify(req.session));
-        // console.log("Name " + req.session.user.name)
 
         res.render('pages/dashboard');
     });

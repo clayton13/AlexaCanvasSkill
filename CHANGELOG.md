@@ -20,4 +20,5 @@
 ## Change log	
 - Added promise support for all of storage  
 	- Including database and get/put requests  
+	- Added promise support for server  
 - Added `getLastGraded` global support  

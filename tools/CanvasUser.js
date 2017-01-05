@@ -93,7 +93,7 @@ User.prototype.getTodoItems = getTodoItems;
 function getCourses() {
     var params = {
         'include[]': ['needs_grading_count',
-            'syllabus_body',
+            // 'syllabus_body',
             'total_scores',
             'term',
             'permissions',
@@ -127,7 +127,7 @@ function getCourses() {
                     console.log("\t" + course.nicknames);
                 }
             });
-        }).then(this.matchNicknames);
+        }).then(this.matchNicknames).thenReturn(this.courses);
     }
 }
 User.prototype.getCourses = getCourses;
@@ -148,7 +148,7 @@ function getNicknames(course) {
 User.prototype.getNicknames = getNicknames;
 
 function matchNicknames() {
-    return getNicknames(null).then(names => {
+    return this.getNicknames(null).then(names => {
         var matches = [];
         var qmatches = [];
         var match;
