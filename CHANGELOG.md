@@ -7,7 +7,7 @@
     - [ ] Change launch phrases to match the outlined way. ie. Use connecting words. 
 - [ ] When attempting to invoke the skill with your first and second example phrase, the skill fails to recognize and the third example throws an error.  The example phrases must function without error since these are interactions that users are most likely to try.  Please see test case 3.1 from our Submission Checklist for guidance on example phrases.
     - [ ] Error Handling
-        - [ ] implement Promises?
+        - [x] implement Promises?
     - [ ] Add request to link to Canvas and to link skill to Amazon
 - [ ] When invoking the skill with the following command “open grades”, the skill’s response is irrelevant to the request.  Please see test case 4.3 from our Submission Checklist for guidance on intent responses.
     - [ ] Remove intent
@@ -18,3 +18,6 @@
 - [ ] Update readme
    
 ## Change log	
+- Added promise support for all of storage  
+	- Including database and get/put requests  
+- Added `getLastGraded` global support  

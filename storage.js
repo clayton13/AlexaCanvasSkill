@@ -1,8 +1,10 @@
 'use strict';
 var AWS = require("aws-sdk");
+var Promise = require("bluebird");
 //"C:/Users/Clayton/Desktop/GitHub/AlexaCanvasSkill" +
 //https://s3.amazonaws.com/canvasskillbucket/myzip.zip
 AWS.config.loadFromPath(__dirname + '/config.json');
+AWS.config.setPromisesDependency(require('bluebird'));
 var table = "CanvasData";
 var globals = require('./globals');
 var https = require('https');
@@ -24,87 +26,65 @@ var storage = (function() {
         //Returns
         //  User if exists
         //  False if nonexistant
-        getUser: function(amz_account, callback) {
-            try {
-                var docClient = new AWS.DynamoDB.DocumentClient();
-                var params = {
-                    TableName: table,
-                    Key: {
-                        "userID": amz_account.user_id,
-                    }
-                };
+        getUser: function(amz_account) {
+            var docClient = new AWS.DynamoDB.DocumentClient();
+            var params = {
+                TableName: table,
+                Key: {
+                    "userID": amz_account.user_id,
+                }
+            };
 
-                docClient.get(params, function(err, data) {
-                    if (err) {
-                        console.log(err);
-                        callback(false);
-                    } else {
-                        // console.log("> " + JSON.stringify(data));
-
-                        if (!isEmptyObject(data.Item)) {
-                            callback(data.Item)
-                        } else {
-                            callback(false)
-                        }
-                    }
-                });
-            } catch (error) {
-                console.log("TRY Catch " + error)
-                callback(false)
-            }
+            return docClient.get(params).promise().then(data => {
+                if (!isEmptyObject(data.Item)) {
+                    return data.Item;
+                } else {
+                    return false;
+                }
+            });
         },
         //Fetches user from database
         //Returns
         //  User if exists
         //  False if nonexistant
-        putUser: function(amz_account, callback) {
-            try {
-                var docClient = new AWS.DynamoDB.DocumentClient();
+        putUser: function(amz_account) {
+            var docClient = new AWS.DynamoDB.DocumentClient();
 
-                var params = {
-                    TableName: table,
-                    Item: {
-                        "userID": amz_account.user_id,
-                        "user_data": {
-                            "amz_account": amz_account
-                        }
-                    }
-                };
-
-                docClient.put(params, function(err, data) {
-                    if (err) {
-                        console.log(err);
-                        callback(false);
-                    } else {
-                        console.log("> " + JSON.stringify(data, null, ' '));
-                        if (!isEmptyObject(data.Item)) {
-                            callback(data)
-                        } else {
-                            callback(false)
-                        }
-                    }
-                });
-            } catch (error) {
-                console.log("TRY Catch " + error)
-                callback(false)
-            }
-        },
-
-        getOrPutUser: function(amz_account, callback) {
-            var _this = this;
-            _this.getUser(amz_account, function(exists) {
-                if (exists !== false) {
-                    callback(exists)
-                } else {
-                    _this.putUser(amz_account, function(exists) {
-                        callback(exists)
-                    })
+            var params = {
+                TableName: table,
+                Item: {
+                    "userID": amz_account.user_id,
+                    "user_data": {
+                        "amz_account": amz_account,
+                        "canvas_account": {},
+                        "timestamp": {}
+                    },
+                    'nicknames': {}
                 }
-            })
+            };
+
+            return docClient.put(params).promise().then(data => {
+                //put user not returning newly created user correctly, just return orig Item.
+                return params.Item;
+            });
+        },
+        //Get user if exits otherwise create one
+        getOrPutUser: function(amz_account) {
+            return this.getUser(amz_account).then(exists => {
+                if (exists !== false) {
+                    console.log("Got user");
+                    return exists;
+                } else {
+                    console.log("Created user");
+                    return this.putUser(amz_account).then(exists => {
+                        return exists;
+                    });
+                }
+            });
         },
         //Updates a given key
         //TODO: optimize for mulitple updates
-        update: function(amz_account, key, value, callback) {
+        update: function(amz_account, key, value) {
             //ie data.timestamp.lastUpdate
 
             var x = {
@@ -122,9 +102,9 @@ var storage = (function() {
             var attrNames = {}
             for (var i = 0; i < attrs.length; i++) {
                 if (i != 0)
-                    uExpression += "."
+                    uExpression += ".";
                 uExpression += "#key" + i;
-                attrNames["#key" + i] = attrs[i]
+                attrNames["#key" + i] = attrs[i];
             }
 
             var docClient = new AWS.DynamoDB.DocumentClient();
@@ -140,26 +120,13 @@ var storage = (function() {
                 },
                 ReturnValues: "ALL_NEW", //UPDATED_NEW"
             };
-            docClient.update(params, function(err, data) {
-                if (err) {
-                    // console.log(err);
-                    callback(false);
-                } else {
-                    console.log("Update> " + JSON.stringify(data.Attributes, null, ' '));
-                    if (!isEmptyObject(data.Attributes)) {
-                        callback(data.Attributes)
-                    } else {
-                        callback(false)
-                    }
 
-                    // if (isEmptyObject(data.Attributes)) {
-                    //     callback(data.Attributes)
-                    // } else {
-                    //     console.log("\n\n\n-----------------------------")
-                    //     console.log(isEmptyObject(data.Attributes))
-                    //     console.log(JSON.stringify(data.Attributes, null, ' '))
-                    //     callback(false)
-                    // }
+            return docClient.update(params).promise().then(data => {
+                console.log("Update> " + JSON.stringify(data.Attributes, null, ' '));
+                if (!isEmptyObject(data.Attributes)) {
+                    return data.Attributes;
+                } else {
+                    return false;
                 }
             });
         },
@@ -214,7 +181,8 @@ var storage = (function() {
                 uri: path,
                 method: 'GET',
                 useQuerystring: true,
-                qs: data}
+                qs: data
+            }
 
 
             return rp(options).then(function(res) {
