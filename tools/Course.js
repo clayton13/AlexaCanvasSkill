@@ -47,7 +47,7 @@ function Course(data, User) {
 //  The five changed to a six
 //  Temp Soln: http://stackoverflow.com/questions/20408537/parsing-big-numbers-in-json-to-strings
 //  Soln: Wrap these ids with strings to begin with.
-Course.prototype.getAssignments = function(callback) {
+Course.prototype.getAssignments = function(forceRefresh) {
     var params = {
         'include[]': ['assignment_visibility',
             'all_dates',
@@ -55,59 +55,41 @@ Course.prototype.getAssignments = function(callback) {
         ],
         'per_page': 99
     };
-    // console.log(this.id)
 
-    // console.log(this.account_id)
-    var _this = this;
-
-    storage.makeGET("/api/v1/courses/" + this.id + "/assignments/", params, this.UserToken, function(rawAssignments) {
-        // var rawCourses = fs.readFileSync("./coursesSample.json", 'utf8');
-        var assignments = JSON.parse(rawAssignments);
-        // fs.writeFile("assignment.json", JSON.stringify(assignments));
-        // console.log(assignments)
-        assignments.forEach((assignment, index) => {
-            var assignment = new Assignment(assignment, _this)
-            if (assignment.isForCredit()) {
-                console.log(assignment.getGrade()[0] + "\t" + assignment.name)
-
-            } else {
-                console.log("NOT" + "\t" + assignment.name)
-
-            }
-            _this.Assignments.push(assignment)
+    // if there is already course data use that else fetch it
+    if (typeof this.Assignments != "undefined" && this.Assignments != null && this.Assignments.length > 0) {
+        console.log("Reusing assignment data");
+        return Promise.resolve(this.Assignments);
+    } else {
+        console.log("Fetching assignment data");
+        return storage.makeGET("/api/v1/courses/" + this.id + "/assignments/", params, this.UserToken).bind(this).then(assignments => {
+            assignments.forEach((assignment, index) => {
+                var assignment = new Assignment(assignment, this);
+                if (assignment.isForCredit()) {
+                    console.log(assignment.getGrade()[0] + "\t" + assignment.name);
+                } else {
+                    console.log("NOT" + "\t" + assignment.name);
+                }
+                this.Assignments.push(assignment);
                 // var course = new Course(course, this);
                 // this.courses.push(course)
 
-            // console.log(course.name + ":  Grade is " + course.getGrade())
+                // console.log(course.name + ":  Grade is " + course.getGrade())
+            });
+
+            this.sortAssignments();
+
+            return this.Assignments;
         });
-        // console.log(_this.Assignments[0].name)
-        // console.log(_this.Assignments[1].name)
-        _this.sortAssignments();
-        // var arr = _this.getLastGraded();
-        // arr.forEach(assignment => {
-        //     console.log(assignment.name)
-        // })
-
-        var c = callback || function() {};
-        c(_this.Assignments);
-        // console.log()
-        // console.log(_this.Assignments[0].name)
-        // console.log(_this.Assignments[1].name)
-
-    })
-
-
-
+    }
 };
 
-function changeNickname(name) {
+Course.prototype.changeNickname = function(name) {
     storage.makePUT("/api/v1/users/self/course_nicknames/" + this.id + "/", "nickname=" + name, this.UserToken).then(function(d) {
-        console.log("change nickname to: " + d.name);
+        console.log("change nickname to: " + d.nickname);
         return d;
     });
-}
-Course.prototype.changeNickname = changeNickname;
-
+};
 
 Course.prototype.getGrade = function() {
     if (this.enrollments.length > 0) {
@@ -115,7 +97,6 @@ Course.prototype.getGrade = function() {
     }
     return "No grade found";
 };
-
 
 Course.prototype.sortAssignments = function() {
     this.Assignments.sort(function(a, b) {
@@ -127,8 +108,17 @@ Course.prototype.sortAssignments = function() {
             return date1 - date2;
     });
 }
+
 Course.prototype.getLastGraded = function(number) {
-    //Prevent index out of bounds
-    var indexes = Math.min(this.Assignments.length, number);
-    return this.Assignments.slice(-indexes);
+    // console.log(this)
+
+    var doLastGraded = function(number) {
+        var indexes = Math.min(this.Assignments.length, number);
+        return this.Assignments.slice(-indexes);
+    }.bind(this);
+
+    return this.getAssignments().then(function() {
+        var lastGraded = doLastGraded(number);
+        return lastGraded;
+    });
 }

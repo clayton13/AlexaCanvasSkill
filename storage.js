@@ -8,6 +8,7 @@ var globals = require('./globals');
 var https = require('https');
 var querystring = require('querystring');
 
+var rp = require('request-promise');
 // AWS.config.update({endpoint: "https://dynamodb.us-east-1.amazonaws.com"});
 var ep = new AWS.Endpoint('arn:aws:dynamodb:us-east-1:708578975317:table/CanvasData');
 
@@ -38,7 +39,7 @@ var storage = (function() {
                         console.log(err);
                         callback(false);
                     } else {
-                        console.log("> " + JSON.stringify(data));
+                        // console.log("> " + JSON.stringify(data));
 
                         if (!isEmptyObject(data.Item)) {
                             callback(data.Item)
@@ -65,10 +66,8 @@ var storage = (function() {
                     Item: {
                         "userID": amz_account.user_id,
                         "user_data": {
-                            "amz_account": amz_account,
-                            "canvas_account": {}
-                        },
-                        'nicknames': {}
+                            "amz_account": amz_account
+                        }
                     }
                 };
 
@@ -77,8 +76,12 @@ var storage = (function() {
                         console.log(err);
                         callback(false);
                     } else {
-                        //put user not returning newly created user correctly, just return orig Item.
-                        callback(params.Item)
+                        console.log("> " + JSON.stringify(data, null, ' '));
+                        if (!isEmptyObject(data.Item)) {
+                            callback(data)
+                        } else {
+                            callback(false)
+                        }
                     }
                 });
             } catch (error) {
@@ -164,9 +167,9 @@ var storage = (function() {
             return json.replace(/([\[:])?(\d{10,})([,\}\]])/g, "$1\"$2\"$3");
         },
         //Makes a put request to canvas
-        makePUT: function(path, data, token, callback) {
+        makePUT: function(path, data, token) {
             var options = {
-                host: globals.BASE_URL,
+                baseUrl: globals.BASE_URL,
                 headers: {
                     "Authorization": "Bearer " + token,
                     // 'content-length': 150,
@@ -181,36 +184,19 @@ var storage = (function() {
                     //  "It's suggested to use the ['Transfer-Encoding', 'chunked'] header line when creating the request."
                     'Transfer-Encoding': 'chunked'
                 },
-                path: path,
-                method: 'PUT'
-            };
-            var req = https.request(options, function(res) {
-                // console.log('STATUS: ' + res.statusCode);
-                // console.log('HEADERS: ' + JSON.stringify(res.headers));
-                res.setEncoding('utf8');
-                var data = ""
-                res.on('data', function(chunk) {
-                    data += chunk;
-                    // console.log('BODY: ' + chunk);
-                });
-                res.on("end", function() {
-                    data = storage.jsonFix(data)
-                    callback(data);
-                    res.removeAllListeners('data');
-                })
+                uri: path,
+                method: 'PUT',
+                form: data
+            }
+            return rp(options).then(function(res) {
+                // console.log(JSON.stringify(res));
+                return JSON.parse(storage.jsonFix(res));
             });
-
-            req.on('error', function(e) {
-                console.log('-------\nERROR WITH REQUEST-------\n' + e.message);
-            });
-
-            req.write(data);
-            req.end();
         },
 
-        makeGET: function(path, data, token, callback) {
+        makeGET: function(path, data, token) {
             var options = {
-                host: globals.BASE_URL,
+                baseUrl: globals.BASE_URL,
                 headers: {
                     "Authorization": "Bearer " + token,
                     // 'content-length': 150,
@@ -225,37 +211,19 @@ var storage = (function() {
                     //  "It's suggested to use the ['Transfer-Encoding', 'chunked'] header line when creating the request."
                     'Transfer-Encoding': 'chunked'
                 },
-                path: path,
+                uri: path,
                 method: 'GET',
+                useQuerystring: true,
+                qs: data}
 
-            };
-            var req = https.request(options, function(res) {
-                // console.log('STATUS: ' + res.statusCode);
-                // console.log('HEADERS: ' + JSON.stringify(res.headers));
-                res.setEncoding('utf8');
-                var data = ""
-                res.on('data', function(chunk) {
-                    data += chunk;
-                    // console.log('BODY: ' + chunk);
-                });
-                res.on("end", function() {
-                    data = storage.jsonFix(data)
-                    callback(data);
-                    res.removeAllListeners('data');
-                })
+
+            return rp(options).then(function(res) {
+                // console.log(JSON.stringify(res));
+                return JSON.parse(storage.jsonFix(res));
             });
 
-            req.on('error', function(e) {
-                console.log('-------\ERROR WITH REQUEST-------\n' + e.message);
-            });
-
-            if (data) {
-                req.write(querystring.stringify(data));
-            }
-            // console.log(req._body)
-            req.end();
         }
-    }
+    };
 })();
 module.exports = storage;
 
