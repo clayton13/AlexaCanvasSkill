@@ -130,7 +130,7 @@ function getUserfromIntent(slots, attrs, data, done) {
 
 var getHowWellIntent = app.intent('GetHowWellIntent', 'read original request data async', (slots, attrs, data, done) => {
     console.log("how well inside")
-    getUserfromIntent(slots, attrs, data, done).then(user => {
+    return getUserfromIntent(slots, attrs, data, done).then(user => {
 
         var letters = {
             'a': 0,
@@ -140,7 +140,7 @@ var getHowWellIntent = app.intent('GetHowWellIntent', 'read original request dat
             'f': 0,
         };
         //Populate letters with the amount of letter grades in gradebook
-        user.getCourses().then(courses => {
+        return user.getCourses().then(courses => {
             courses.forEach(course => {
                 var grade = course.getGrade();
                 console.log(grade + "\t " + course.name)
@@ -212,12 +212,26 @@ var getHowWellIntent = app.intent('GetHowWellIntent', 'read original request dat
                 });
             }
         });
-    })
+    }).catch(ERRORS.PresentableError, function(err) {
+        done({
+            text: err.message,
+            end: true
+        });
+    }).catch(ERRORS.HandledError, function(err) {
+        //Handled error
+        console.log("I dont have to worry");
+    });
+    // .catch(function(err) {
+    //     done({
+    //         text: "Unexpected error",
+    //         end: true
+    //     });
+    // });
 });
 
 
 var getUpcommingEventsIntent = app.intent('GetUpcommingEventsIntent', 'read original request data async', (slots, attrs, data, done) => {
-    getUserfromIntent(slots, attrs, data, done).then(user => {
+    return getUserfromIntent(slots, attrs, data, done).then(user => {
         return user.getUpcommingEvents();
     }).then(events => {
         console.log("events")
@@ -226,7 +240,7 @@ var getUpcommingEventsIntent = app.intent('GetUpcommingEventsIntent', 'read orig
             var event = {};
             var upcomming = "You have " + events.length + " upcoming events<break time='2ms'/>";
             console.log(upcomming)
-            events.forEach(function(event) {
+            return events.forEach(function(event) {
                 upcomming += event.title + "<break time='4ms'/>";
             });
 
@@ -243,7 +257,21 @@ var getUpcommingEventsIntent = app.intent('GetUpcommingEventsIntent', 'read orig
                 end: true
             });
         }
+    }).catch(ERRORS.PresentableError, function(err) {
+        done({
+            text: err.message,
+            end: true
+        });
+    }).catch(ERRORS.HandledError, function(err) {
+        //Handled error
+        console.log("I dont have to worry");
     });
+    // .catch(function(err) {
+    //     done({
+    //         text: "Unexpected error",
+    //         end: true
+    //     });
+    // });
 });
 
 function doGetLastAssignmentsIntent(slots, attrs, data, done) {

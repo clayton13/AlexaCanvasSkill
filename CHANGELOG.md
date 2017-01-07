@@ -6,7 +6,7 @@
 - [ ] The example phrases that you chose to present to users in the companion app currently use unsupported launch phrasing. More information available [here.](https://developer.amazon.com/public/solutions/alexa/alexa-skills-kit/docs/supported-phrases-to-begin-a-conversation?ref_=pe_679090_102923190)
     - [ ] Change launch phrases to match the outlined way. ie. Use connecting words. 
 - [ ] When attempting to invoke the skill with your first and second example phrase, the skill fails to recognize and the third example throws an error.  The example phrases must function without error since these are interactions that users are most likely to try.  Please see test case 3.1 from our Submission Checklist for guidance on example phrases.
-    - [ ] Error Handling
+    - [x] Error Handling
         - [x] implement Promises?
     - [ ] Add request to link to Canvas and to link skill to Amazon
 - [ ] When invoking the skill with the following command “open grades”, the skill’s response is irrelevant to the request.  Please see test case 4.3 from our Submission Checklist for guidance on intent responses.
@@ -26,3 +26,4 @@
 - Added capability to determine desired course via listing  
 - Error handling  
     - Created custom error classes  
+    - Added to all intents  
