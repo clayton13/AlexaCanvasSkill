@@ -23,3 +23,6 @@
 	- Added promise support for server  
     - Added promise support for skill  
 - Added `getLastGraded` global support  
+- Added capability to determine desired course via listing  
+- Error handling  
+    - Created custom error classes  

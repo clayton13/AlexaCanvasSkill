@@ -3,8 +3,13 @@ var https = require('https');
 var User = require(__dirname + '/tools/CanvasUser');
 var storage = require(__dirname + '/storage');
 var express = require("express");
+var ERRORS = require("./customerror");
 var Promise = require("bluebird");
 
+Promise.config({
+    cancellation: true,
+    longStackTraces: true
+});
 
 
 const alexia = require('alexia');
@@ -27,15 +32,26 @@ function checkLinked() {
 
 function getAmazon(token, session) {
     var amz_account = session.amz_account || {};
+    console.log(ERRORS.Request.StatusCodeError)
+    if (process.env.NODE_CLAYTON === "true") {
+        console.log("------------HI Clayton-------------");
+        amz_account = require("./accounts").amz_account;
+        console.log(amz_account)
+        console.log("-----------------------------------");
+    }
     if (isValidObject(amz_account)) {
         console.log("using session")
         return Promise.resolve(amz_account);
     } else {
-        return storage.getAmazonAccount(token).then(amz_account => {
-            session.amz_account = {}
-            session.amz_account = amz_account;
-            return amz_account;
-        });
+        if (token) {
+            return storage.getAmazonAccount(token).then(amz_account => {
+                session.amz_account = {}
+                session.amz_account = amz_account;
+                return amz_account;
+            })
+        } else {
+            return Promise.reject(new ERRORS.NotLinkedError("Not linked"));
+        }
     }
 }
 
@@ -50,8 +66,8 @@ app.onStart(() => {
 
 
 function handleNoMatch(user, done) {
-    var stringResult = 'I could not tell what course you wanted. I suggest you login to canvas skill <break time=".1ms"/>dot <break time=".1ms"/>tk <break time="1ms"/>so you can add more custom nicknames';
-    // +'<break time="5ms"/> Do you want me to list your current courses so you can provide a nickname ? '
+    var stringResult = 'I could not tell what course you wanted. I suggest you login to canvas skill <break time=".1ms"/>dot <break time=".1ms"/>tk <break time="1ms"/>so you can add more custom nicknames' +
+        '<break time="5ms"/> Would you like me to list your current courses? ';
 
     var courselist = "";
     var cnt = 1;
@@ -68,14 +84,15 @@ function handleNoMatch(user, done) {
         attrs: {
             from: "GetGradeIntent",
             courselist: courselist,
-            listResult: listResult
+            listResult: listResult,
+            courseCount: user.courses.length
         },
-        end: true
+        end: false
     });
 }
 
 function linkAccount(done) {
-    return done({
+    done({
         text: "Unable to gather grades, please link your account in the Alexa app.",
         card: {
             type: "LinkAccount"
@@ -91,19 +108,20 @@ function linkAccount(done) {
 function getUserfromIntent(slots, attrs, data, done) {
     var accessToken = data.session.user.accessToken || 0;
 
-    if (accessToken) {
-        return getAmazon(accessToken, data.session.user).then(account => {
-            return storage.getUser(account).then(u => {
-                var user = new User(u);
-                console.log("Got user from intent")
-                return user;
-            });
+    // if (accessToken) {
+    return getAmazon(accessToken, data.session.user).then(account => {
+        return storage.getUser(account).then(u => {
+            if (u === false) {}
+            var user = new User(u);
+            console.log("Got user from intent")
+            return user;
         });
-
-    } else {
-        //Link account
-        return linkAccount(done);
-    }
+    }).catch(ERRORS.NotLinkedError, function(err) {
+        linkAccount(done);
+        return Promise.reject(new ERRORS.HandledError(err.message, err));
+    }).catch(ERRORS.Request.StatusCodeError, function(err) {
+        return Promise.reject(new ERRORS.PresentableError("Unable to verifiy amazon account.", err));
+    });
 }
 
 
@@ -272,45 +290,66 @@ var getLastAssignmentsIntent = app.intent('GetLastAssignmentsIntent', 'read orig
     });
 });
 
-var getGradeIntent = app.intent('GetGradeIntent', 'read original request data async', (slots, attrs, data, done) => {
+function doGetGradeIntent(slots, attrs, data, done) {
     var course = slots.ClassName || "";
     var accessToken = data.session.user.accessToken || 0;
 
-    if (course === "" || typeof course === 'undefined') {
+    function doGetGrade(course, done) {
+        // console.log(course)
+        var stringResult = "Your current grade in " + (course.meta.title || course.nickname) + " is " + course.getGrade() + " percent.";
+        console.log(stringResult);
+
         done({
-            text: "No course name provided",
+            text: stringResult,
             end: true
         });
         return;
     }
 
-    getUserfromIntent(slots, attrs, data, done).then(user => {
-        console.log(user)
-        user.findCourse(course).then(y => {
+    return getUserfromIntent(slots, attrs, data, done).then(user => {
+            console.log(user)
+            var choice = slots.number || 0;
 
-            if (typeof y !== 'undefined') {
-                if (!Array.isArray(y)) {
-                    // console.log(course)
-                    var stringResult = "Your current grade in " + (y.meta.title || y.nickname) + " is " + y.getGrade() + " percent.";
-                    console.log(stringResult);
-
-                    done({
-                        text: stringResult,
-                        end: true
-                    });
-
-                } else {
-                    //Todo theres hope here for the user to find what they want, just out of time
-                    handleNoMatch(user, done);
-                }
+            if (attrs.previousIntent === "GetNumberIntent") {
+                return user.getCourses().then(courses => {
+                    return doGetGrade(courses[choice - 1], done);
+                });
             } else {
-                handleNoMatch(user, done);
-
-
+                if (course === "" || typeof course === 'undefined') {
+                    handleNoMatch(user, done);
+                } else {
+                    return user.findCourse(course).then(y => {
+                        if (typeof y !== 'undefined') {
+                            if (!Array.isArray(y)) {
+                                return doGetGrade(y, done);
+                            } else {
+                                //Todo theres hope here for the user to find what they want, just out of time
+                                handleNoMatch(user, done);
+                            }
+                        } else {
+                            handleNoMatch(user, done);
+                        }
+                    });
+                }
             }
-        });
-    });
-});
+        }).catch(ERRORS.PresentableError, function(err) {
+            done({
+                text: err.message,
+                end: true
+            });
+        }).catch(ERRORS.HandledError, function(err) {
+            //Handled error
+            console.log("I dont have to worry");
+        })
+        // .catch(function(err) {
+        //     done({
+        //         text: "Unexpected error",
+        //         end: true
+        //     });
+        // });
+}
+
+var getGradeIntent = app.intent('GetGradeIntent', 'read original request data async', doGetGradeIntent);
 
 //Allow main intents starting access
 
@@ -358,6 +397,21 @@ var NoIntent = app.intent('no', 'read original request data async', (slots, attr
 });
 
 var GetNumberIntent = app.intent('GetNumberIntent', 'read original request data async', (slots, attrs, data, done) => {
+    var choice = slots.number || -1;
+
+    if (choice >= 1 && choice <= attrs.courseCount + 1) {
+        console.log("eval true");
+        //Manually set beacuse were going to forward the intent
+        attrs.previousIntent = "GetNumberIntent";
+
+        doGetGradeIntent(slots, attrs, data, done);
+    } else {
+        done({
+            text: choice + " is not a valid choice, say a number between one and " + attrs.courseCount + ". I have sent a card with valid choices.",
+            attrs: attrs,
+            end: false
+        });
+    }
 
 
 });
@@ -372,14 +426,18 @@ app.action({
 });
 app.action({
     from: "AMAZON.YesIntent",
-    to: ["AMAZON.YesIntent", "AMAZON.NoIntent"]
+    to: ["GetNumberIntent"]
 });
+//Allow looping over determining the correct course
+app.action({
+    from: 'GetNumberIntent',
+    to: "GetNumberIntent"
+})
 
-
-exports.handler = (event, context, callback) => {
-    app.handle(event, data => {
-        callback(null, data);
-    });
-};
+// exports.handler = (event, context, callback) => {
+//     app.handle(event, data => {
+//         callback(null, data);
+//     });
+// };
 // Testing over HTTPS
-// module.exports = app;
+module.exports = app;
