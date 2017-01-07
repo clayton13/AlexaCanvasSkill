@@ -316,7 +316,25 @@ function doGetGradeIntent(slots, attrs, data, done) {
                 });
             } else {
                 if (course === "" || typeof course === 'undefined') {
-                    handleNoMatch(user, done);
+                    return user.getCourses().then(courses => {
+                        var stringResult = "Your current grades are ";
+                        courses.forEach(course => {
+                            var strGrade = "";
+                            var grade = course.getGrade();
+                            if (grade !== 'undefined' && grade !== null) {
+                                strGrade = grade + " percent."
+                            } else {
+                                strGrade = "not listed."
+                            }
+
+                            stringResult += (course.meta.title || course.nickname || course.name) + '<break time="2ms"/>' + strGrade + '<break time="2ms"/>';
+                        });
+                        done({
+                            text: wrapSSML(stringResult),
+                            ssml: true,
+                            end: true
+                        });
+                    });
                 } else {
                     return user.findCourse(course).then(y => {
                         if (typeof y !== 'undefined') {
