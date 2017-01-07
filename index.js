@@ -65,7 +65,7 @@ app.onStart(() => {
 });
 
 
-function handleNoMatch(user, done) {
+function handleNoMatch(user, slots, data, done) {
     var stringResult = 'I could not tell what course you wanted. I suggest you login to canvas skill <break time=".1ms"/>dot <break time=".1ms"/>tk <break time="1ms"/>so you can add more custom nicknames' +
         '<break time="5ms"/> Would you like me to list your current courses? ';
 
@@ -82,7 +82,9 @@ function handleNoMatch(user, done) {
         text: "<speak>" + stringResult + "</speak>",
         ssml: true,
         attrs: {
-            from: "GetGradeIntent",
+            action: "MatchCourse",
+            origSlots: slots,
+            from: data.request.intent.name,
             courselist: courselist,
             listResult: listResult,
             courseCount: user.courses.length
@@ -244,51 +246,84 @@ var getUpcommingEventsIntent = app.intent('GetUpcommingEventsIntent', 'read orig
     });
 });
 
-var getLastAssignmentsIntent = app.intent('GetLastAssignmentsIntent', 'read original request data async', (slots, attrs, data, done) => {
+function doGetLastAssignmentsIntent(slots, attrs, data, done) {
     var course = slots.ClassName || "";
     var coursenumberOfAssignments = slots.numberOfAssignments || 3
 
     var accessToken = data.session.user.accessToken || 0;
 
-    getUserfromIntent(slots, attrs, data, done).then(user => {
-        if (course === "") {
 
+    function doGetLastGraded(courseOrUser, coursenumberOfAssignments, done) {
+        var stringResult = "Your last " + coursenumberOfAssignments + " graded assignments ";
+        if (courseOrUser instanceof User) {
+            stringResult += "overall";
+        } else {
+            stringResult += "in " + (courseOrUser.meta.title || courseOrUser.nickname || courseOrUser.name);
+        }
+        stringResult += " are\n";
+
+        return courseOrUser.getLastGraded(coursenumberOfAssignments).then(assignmentArr => {
+            assignmentArr.forEach(assignment => {
+                stringResult += (assignment.name) + " is " + assignment.getGrade()[0] + " percent.<break time='2ms'/>\n";
+            });
             done({
-                text: "No course name provided",
+                text: wrapSSML(stringResult),
+                ssml: true,
                 end: true
             });
-        } else {
-            user.findCourse(course).then(y => {
+            return;
+        });
+    }
 
-                if (typeof y !== 'undefined') {
-                    if (!Array.isArray(y)) {
+    return getUserfromIntent(slots, attrs, data, done).then(user => {
+        console.log(user)
+        var choice = slots.number || 0;
 
-                        var stringResult = "Your last " + coursenumberOfAssignments + " graded assignments are";
-
-                        // y.getAssignments(function(assignments) {
-                        y.getLastGraded(coursenumberOfAssignments).then(assignmentArr => {
-                            assignmentArr.forEach(assignment => {
-                                // console.log(assignment.getGrade())
-                                stringResult += (assignment.name) + " is " + assignment.getGrade()[0] + " percent.<break time='2ms'/>";
-                            });
-                            done({
-                                text: wrapSSML(stringResult),
-                                ssml: true,
-                                end: true
-                            });
-                        });
-
-                    } else {
-                        //Todo theres hope here for the user to find what they want, just out of time
-                        handleNoMatch(user, done);
-                    }
-                } else {
-                    handleNoMatch(user, done);
-                }
+        if (attrs.previousIntent === "GetNumberIntent") {
+            return user.getCourses().then(courses => {
+                return doGetLastGraded(courses[choice - 1], coursenumberOfAssignments, done);
             });
+        } else {
+            if (course === "" || typeof course === 'undefined') {
+
+                done({
+                    text: "Please provide a course name",
+                    end: true
+                });
+                return;
+            } else {
+                return user.findCourse(course).then(y => {
+                    if (typeof y !== 'undefined') {
+                        if (!Array.isArray(y)) {
+                            return doGetLastGraded(y, coursenumberOfAssignments, done);
+                        } else {
+                            //Todo theres hope here for the user to find what they want, just out of time
+                            handleNoMatch(user, slots, data, done);
+                        }
+                    } else {
+                        handleNoMatch(user, slots, data, done);
+                    }
+                });
+            }
         }
+    }).catch(ERRORS.PresentableError, function(err) {
+        done({
+            text: err.message,
+            end: true
+        });
+    }).catch(ERRORS.HandledError, function(err) {
+        //Handled error
+        console.log("I dont have to worry");
     });
-});
+    // .catch(function(err) {
+    //     done({
+    //         text: "Unexpected error",
+    //         end: true
+    //     });
+    // });
+}
+
+var getLastAssignmentsIntent = app.intent('GetLastAssignmentsIntent', 'read original request data async', doGetLastAssignmentsIntent);
 
 function doGetGradeIntent(slots, attrs, data, done) {
     var course = slots.ClassName || "";
@@ -342,10 +377,10 @@ function doGetGradeIntent(slots, attrs, data, done) {
                                 return doGetGrade(y, done);
                             } else {
                                 //Todo theres hope here for the user to find what they want, just out of time
-                                handleNoMatch(user, done);
+                                handleNoMatch(user, slots, data, done);
                             }
                         } else {
-                            handleNoMatch(user, done);
+                            handleNoMatch(user, slots, data, done);
                         }
                     });
                 }
@@ -374,7 +409,7 @@ var getGradeIntent = app.intent('GetGradeIntent', 'read original request data as
 const YesIntent = app.builtInIntent('yes', 'read original request data async', (slots, attrs, data, done) => {
     console.log("yes start")
 
-    if (attrs.from === "GetGradeIntent") {
+    if (attrs.action === "MatchCourse") {
         done({
             text: wrapSSML("Choose a number. <break time='2ms'/>" + attrs.listResult),
             ssml: true,
@@ -393,6 +428,10 @@ const YesIntent = app.builtInIntent('yes', 'read original request data async', (
 });
 
 
+var handlers = {
+    "GetGradeIntent": doGetGradeIntent,
+    "GetLastAssignmentsIntent": doGetLastAssignmentsIntent
+}
 
 var NoIntent = app.intent('no', 'read original request data async', (slots, attrs, data, done) => {
     // // Clear calendar for date `attrs.date` here
@@ -422,7 +461,8 @@ var GetNumberIntent = app.intent('GetNumberIntent', 'read original request data 
         //Manually set beacuse were going to forward the intent
         attrs.previousIntent = "GetNumberIntent";
 
-        doGetGradeIntent(slots, attrs, data, done);
+        attrs.origSlots.number = choice;
+        handlers[attrs.from](attrs.origSlots, attrs, data, done);
     } else {
         done({
             text: choice + " is not a valid choice, say a number between one and " + attrs.courseCount + ". I have sent a card with valid choices.",
@@ -439,7 +479,7 @@ app.action({
     to: [getHowWellIntent, getLastAssignmentsIntent, getGradeIntent, getUpcommingEventsIntent]
 });
 app.action({
-    from: getGradeIntent,
+    from: [getGradeIntent, getLastAssignmentsIntent],
     to: ["AMAZON.YesIntent", "AMAZON.NoIntent"]
 });
 app.action({
