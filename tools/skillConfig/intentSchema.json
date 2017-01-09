@@ -1,0 +1,34 @@
+{
+    "intents": [{
+        "intent": "AMAZON.YesIntent"
+    }, {
+        "intent": "AMAZON.NoIntent"
+    }, {
+        "intent": "AMAZON.HelpIntent"
+    }, {
+        "intent": "GetHowWellIntent"
+    }, {
+        "intent": "GetUpcommingEventsIntent"
+    }, {
+        "intent": "GetNumberIntent",
+        "slots": [{
+            "name": "number",
+            "type": "AMAZON.NUMBER"
+        }]
+    }, {
+        "intent": "GetGradeIntent",
+        "slots": [{
+            "name": "ClassName",
+            "type": "LIST_OF_CLASSES"
+        }]
+    }, {
+        "intent": "GetLastAssignmentsIntent",
+        "slots": [{
+            "name": "numberOfAssignments",
+            "type": "AMAZON.NUMBER"
+        }, {
+            "name": "ClassName",
+            "type": "LIST_OF_CLASSES"
+        }]
+    }]
+}
