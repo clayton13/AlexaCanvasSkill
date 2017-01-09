@@ -138,13 +138,12 @@ app.onStart((slots, attrs, data, done) => {
     }).catch(ERRORS.HandledError, function(err) {
         //Handled error
         console.log("I dont have to worry");
+    }).catch(function(err) {
+        done({
+            text: "Unexpected error",
+            end: true
+        });
     });
-    // .catch(function(err) {
-    //     done({
-    //         text: "Unexpected error",
-    //         end: true
-    //     });
-    // });
 });
 
 var getHowWellIntent = app.intent('GetHowWellIntent', 'read original request data async', (slots, attrs, data, done) => {
@@ -284,13 +283,12 @@ var getUpcommingEventsIntent = app.intent('GetUpcommingEventsIntent', 'read orig
     }).catch(ERRORS.HandledError, function(err) {
         //Handled error
         console.log("I dont have to worry");
+    }).catch(function(err) {
+        done({
+            text: "Unexpected error",
+            end: true
+        });
     });
-    // .catch(function(err) {
-    //     done({
-    //         text: "Unexpected error",
-    //         end: true
-    //     });
-    // });
 });
 
 function doGetLastAssignmentsIntent(slots, attrs, data, done) {
@@ -361,13 +359,12 @@ function doGetLastAssignmentsIntent(slots, attrs, data, done) {
     }).catch(ERRORS.HandledError, function(err) {
         //Handled error
         console.log("I dont have to worry");
+    }).catch(function(err) {
+        done({
+            text: "Unexpected error",
+            end: true
+        });
     });
-    // .catch(function(err) {
-    //     done({
-    //         text: "Unexpected error",
-    //         end: true
-    //     });
-    // });
 }
 
 var getLastAssignmentsIntent = app.intent('GetLastAssignmentsIntent', 'read original request data async', doGetLastAssignmentsIntent);
@@ -389,64 +386,63 @@ function doGetGradeIntent(slots, attrs, data, done) {
     }
 
     return getUserfromIntent(slots, attrs, data, done).then(user => {
-            console.log(user)
-            var choice = slots.number || 0;
+        console.log(user)
+        var choice = slots.number || 0;
 
-            if (attrs.previousIntent === "GetNumberIntent") {
+        if (attrs.previousIntent === "GetNumberIntent") {
+            return user.getCourses().then(courses => {
+                return doGetGrade(courses[choice - 1], done);
+            });
+        } else {
+            if (course === "" || typeof course === 'undefined') {
                 return user.getCourses().then(courses => {
-                    return doGetGrade(courses[choice - 1], done);
+                    var stringResult = "Your current grades are ";
+                    courses.forEach(course => {
+                        var strGrade = "";
+                        var grade = course.getGrade();
+                        if (grade !== 'undefined' && grade !== null) {
+                            strGrade = grade + " percent."
+                        } else {
+                            strGrade = "not listed."
+                        }
+
+                        stringResult += (course.meta.title || course.nickname || course.name) + '<break time="2ms"/>' + strGrade + '<break time="2ms"/>';
+                    });
+                    done({
+                        text: wrapSSML(stringResult),
+                        ssml: true,
+                        end: true
+                    });
                 });
             } else {
-                if (course === "" || typeof course === 'undefined') {
-                    return user.getCourses().then(courses => {
-                        var stringResult = "Your current grades are ";
-                        courses.forEach(course => {
-                            var strGrade = "";
-                            var grade = course.getGrade();
-                            if (grade !== 'undefined' && grade !== null) {
-                                strGrade = grade + " percent."
-                            } else {
-                                strGrade = "not listed."
-                            }
-
-                            stringResult += (course.meta.title || course.nickname || course.name) + '<break time="2ms"/>' + strGrade + '<break time="2ms"/>';
-                        });
-                        done({
-                            text: wrapSSML(stringResult),
-                            ssml: true,
-                            end: true
-                        });
-                    });
-                } else {
-                    return user.findCourse(course).then(y => {
-                        if (typeof y !== 'undefined') {
-                            if (!Array.isArray(y)) {
-                                return doGetGrade(y, done);
-                            } else {
-                                //Todo theres hope here for the user to find what they want, just out of time
-                                handleNoMatch(user, slots, data, done);
-                            }
+                return user.findCourse(course).then(y => {
+                    if (typeof y !== 'undefined') {
+                        if (!Array.isArray(y)) {
+                            return doGetGrade(y, done);
                         } else {
+                            //Todo theres hope here for the user to find what they want, just out of time
                             handleNoMatch(user, slots, data, done);
                         }
-                    });
-                }
+                    } else {
+                        handleNoMatch(user, slots, data, done);
+                    }
+                });
             }
-        }).catch(ERRORS.PresentableError, function(err) {
-            done({
-                text: err.message,
-                end: true
-            });
-        }).catch(ERRORS.HandledError, function(err) {
-            //Handled error
-            console.log("I dont have to worry");
-        })
-        // .catch(function(err) {
-        //     done({
-        //         text: "Unexpected error",
-        //         end: true
-        //     });
-        // });
+        }
+    }).catch(ERRORS.PresentableError, function(err) {
+        done({
+            text: err.message,
+            end: true
+        });
+    }).catch(ERRORS.HandledError, function(err) {
+        //Handled error
+        console.log("I dont have to worry");
+    }).catch(function(err) {
+        done({
+            text: "Unexpected error",
+            end: true
+        });
+    });
 }
 
 var getGradeIntent = app.intent('GetGradeIntent', 'read original request data async', doGetGradeIntent);
