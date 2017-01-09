@@ -32,7 +32,6 @@ function checkLinked() {
 
 function getAmazon(token, session) {
     var amz_account = session.amz_account || {};
-    console.log(ERRORS.Request.StatusCodeError)
     if (process.env.NODE_CLAYTON === "true") {
         console.log("------------HI Clayton-------------");
         amz_account = require("./accounts").amz_account;
@@ -60,9 +59,6 @@ function wrapSSML(ssml) {
 }
 
 
-app.onStart(() => {
-    return 'Welcome to My Hello World App, say hello world to get started, or say help to get more instructions';
-});
 
 
 function handleNoMatch(user, slots, data, done) {
@@ -127,6 +123,29 @@ function getUserfromIntent(slots, attrs, data, done) {
 }
 
 
+app.onStart((slots, attrs, data, done) => {
+    console.log("how well inside")
+    return getUserfromIntent(slots, attrs, data, done).then(user => {
+        done({
+            text: 'Welcome to My gradebook, you can ask about your grades, or say help to get more instructions',
+            end: false
+        });
+    }).catch(ERRORS.PresentableError, function(err) {
+        done({
+            text: err.message,
+            end: true
+        });
+    }).catch(ERRORS.HandledError, function(err) {
+        //Handled error
+        console.log("I dont have to worry");
+    });
+    // .catch(function(err) {
+    //     done({
+    //         text: "Unexpected error",
+    //         end: true
+    //     });
+    // });
+});
 
 var getHowWellIntent = app.intent('GetHowWellIntent', 'read original request data async', (slots, attrs, data, done) => {
     console.log("how well inside")
@@ -502,6 +521,16 @@ var GetNumberIntent = app.intent('GetNumberIntent', 'read original request data 
 
 });
 
+var HelpIntent = app.intent('help', 'read original request data async', (slots, attrs, data, done) => {
+    done({
+        text: wrapSSML('You can ask about your grades <break time="2ms"/> what your current grade in a class is <break time="2ms"/> about your upcoming events ' +
+            '<break time="2ms"/> and your recent graded assignments for a class. For more help visit canvas skill <break time=".1ms"/>dot <break time=".1ms"/>tk <break time="1ms"/>.'),
+        ssml: true,
+        attrs: attrs,
+        end: false
+    });
+});
+
 app.action({
     from: '*',
     to: [getHowWellIntent, getLastAssignmentsIntent, getGradeIntent, getUpcommingEventsIntent]
@@ -518,6 +547,10 @@ app.action({
 app.action({
     from: 'GetNumberIntent',
     to: "GetNumberIntent"
+})
+app.action({
+    from: '*',
+    to: HelpIntent
 })
 
 // exports.handler = (event, context, callback) => {
