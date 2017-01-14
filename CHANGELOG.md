@@ -18,8 +18,8 @@
 - [ ] Update readme
    
 ## Feedback round two  
-- [ ] Throws error when no token added....  
-    - [ ] Send warning when invalid canvas token is in account  
+- [x] Throws error when no token added....  
+    - [x] Send warning when invalid canvas token is in account  
 - [ ] Implement stop and cancel  
 - [x] Fails to recognize the phrase `"...about my current grade in Math."`  
     - [x] Add `about` utterances  
@@ -34,6 +34,7 @@
 - Error handling  
     - Created custom error classes  
     - Added to all intents  
+    - Added prompt to link alexa and canvas
 - Alexa Config Changes  
     - Changed name to `My GradeBook`  
         - Updated logos accordingly  

@@ -54,6 +54,15 @@ function getAmazon(token, session) {
     }
 }
 
+function checkCanvas(user) {
+    var valid = user.hasValidToken();
+    if (!valid) {
+        throw new ERRORS.InvalidCanvasTokenError("Not linked");
+    } else {
+        return user;
+    }
+}
+
 function wrapSSML(ssml) {
     return "<speak>" + ssml + "</speak>";
 }
@@ -102,6 +111,21 @@ function linkAccount(done) {
     })
 }
 
+function linkCanvas(done) {
+    done({
+        text: wrapSSML('Unable to gather your grades without gradebook access, please add a Canvas Token. Visit ' +
+            'canvas skill <break time=".1ms"/>dot <break time=".1ms"/>tk <break time="1ms"/> to add a token.'),
+        ssml: true,
+        card: {
+            title: 'Update Canvas Account',
+            content: 'This skill cannot access your canvas acount without a valid access token.\n To add a token, ' +
+                'please visit www.CanvasSkill.tk. While there you can also add custom nicknames for your classes ' +
+                'and view your settings.'
+        },
+        end: true
+    });
+}
+
 
 function getUserfromIntent(slots, attrs, data, done) {
     var accessToken = data.session.user.accessToken || 0;
@@ -112,10 +136,14 @@ function getUserfromIntent(slots, attrs, data, done) {
             if (u === false) {}
             var user = new User(u);
             console.log("Got user from intent")
-            return user;
+            return checkCanvas(user);
         });
     }).catch(ERRORS.NotLinkedError, function(err) {
         linkAccount(done);
+        return Promise.reject(new ERRORS.HandledError(err.message, err));
+    }).catch(ERRORS.InvalidCanvasTokenError, function(err) {
+        console.log(err)
+        linkCanvas(done);
         return Promise.reject(new ERRORS.HandledError(err.message, err));
     }).catch(ERRORS.Request.StatusCodeError, function(err) {
         return Promise.reject(new ERRORS.PresentableError("Unable to verifiy amazon account.", err));
@@ -238,13 +266,13 @@ var getHowWellIntent = app.intent('GetHowWellIntent', 'read original request dat
     }).catch(ERRORS.HandledError, function(err) {
         //Handled error
         console.log("I dont have to worry");
+    }).catch(function(err) {
+        console.log(err)
+        done({
+            text: "There was an unexpected server error, please try again later",
+            end: true
+        });
     });
-    // .catch(function(err) {
-    //     done({
-    //         text: "Unexpected error",
-    //         end: true
-    //     });
-    // });
 });
 
 

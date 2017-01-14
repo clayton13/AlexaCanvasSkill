@@ -8,6 +8,16 @@ NotLinkedError.prototype = Object.create(Error.prototype);
 NotLinkedError.prototype.constructor = NotLinkedError;
 exports.NotLinkedError = NotLinkedError;
 
+//For when Skill has an invalid canvas access token, usually handled
+function InvalidCanvasTokenError(message) {
+    this.message = message;
+    this.name = "InvalidCanvasTokenError";
+    Error.captureStackTrace(this, NotLinkedError);
+}
+InvalidCanvasTokenError.prototype = Object.create(Error.prototype);
+InvalidCanvasTokenError.prototype.constructor = InvalidCanvasTokenError;
+exports.InvalidCanvasTokenError = InvalidCanvasTokenError;
+
 //For when a bad error is predictable and you want to send a better message to the user
 function PresentableError(message, orig) {
     this.message = message;
