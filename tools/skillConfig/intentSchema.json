@@ -6,6 +6,12 @@
     }, {
         "intent": "AMAZON.HelpIntent"
     }, {
+        "intent": "AMAZON.StopIntent",
+        "slots": []
+    }, {
+        "intent": "AMAZON.CancelIntent",
+        "slots": []
+    }, {
         "intent": "GetHowWellIntent"
     }, {
         "intent": "GetUpcommingEventsIntent"

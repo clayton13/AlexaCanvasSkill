@@ -21,8 +21,8 @@
 - [ ] Throws error when no token added....  
     - [ ] Send warning when invalid canvas token is in account  
 - [ ] Implement stop and cancel  
-- [ ] Fails to recognize the phrase `"...about my current grade in Math."`  
-    - [ ] Add `about` utterances  
+- [x] Fails to recognize the phrase `"...about my current grade in Math."`  
+    - [x] Add `about` utterances  
 
 ## Change log	
 - Added promise support for all of storage  
