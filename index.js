@@ -286,7 +286,7 @@ var getHowWellIntent = app.intent('GetHowWellIntent', 'read original request dat
     }).catch(function(err) {
         console.log(err)
         done({
-            text: "There was an unexpected server error, please try again later",
+            text: "Sorry, there was an unexpected server error, please try again later",
             end: true
         });
     });
@@ -330,7 +330,7 @@ var getUpcommingEventsIntent = app.intent('GetUpcommingEventsIntent', 'read orig
         console.log("I dont have to worry");
     }).catch(function(err) {
         done({
-            text: "Unexpected error",
+            text: "Sorry, there was an unexpected server error, please try again later",
             end: true
         });
     });
@@ -414,7 +414,7 @@ function doGetLastAssignmentsIntent(slots, attrs, data, done) {
         console.log("I dont have to worry");
     }).catch(function(err) {
         done({
-            text: "Unexpected error",
+            text: "Sorry, there was an unexpected server error, please try again later",
             end: true
         });
     });
@@ -500,7 +500,7 @@ function doGetGradeIntent(slots, attrs, data, done) {
         console.log("I dont have to worry");
     }).catch(function(err) {
         done({
-            text: "Unexpected error",
+            text: "Sorry, there was an unexpected server error, please try again later",
             end: true
         });
     });
@@ -551,7 +551,7 @@ var NoIntent = app.intent('no', 'read original request data async', (slots, attr
         });
     } else {
         done({
-            text: "Okay",
+            text: "Okay, Goodbye",
             end: true
         })
     }
