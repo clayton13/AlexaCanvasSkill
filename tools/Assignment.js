@@ -35,7 +35,7 @@ Assignment.prototype.isForCredit = function() {
 
 Assignment.prototype.getGrade = function() {
     //If graded/forcredit assignment
-    if (this.isForCredit()) {
+    if (this.isForCredit() && this.submission.graded_at !== null) {
         if (this.submission.grade.indexOf('%') > 0) {
             return [
                 //Get rid of trailing zeros, get rid of %, convert to 2 digit
