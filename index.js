@@ -174,6 +174,23 @@ app.onStart((slots, attrs, data, done) => {
     });
 });
 
+var exit = function(slots, attrs, data, done) {
+    done({
+        text: 'My-Gradebook closed. Goodbye.',
+        end: true
+    });
+};
+app.intent('stop', 'read original request data async', exit);
+app.intent('cancel', 'read original request data async', exit);
+app.onEnd(exit);
+
+app.defaultActionFail((slots, attrs, data, done) => {
+    done({
+        text: 'Your command is invalid, you can ask about your grades, upcoming assignments, how you are doing, or say help to get more instructions',
+        end: true
+    });
+});
+
 var getHowWellIntent = app.intent('GetHowWellIntent', 'read original request data async', (slots, attrs, data, done) => {
     console.log("how well inside")
     return getUserfromIntent(slots, attrs, data, done).then(user => {
@@ -574,7 +591,7 @@ app.action({
 })
 app.action({
     from: '*',
-    to: HelpIntent
+    to: ["AMAZON.StopIntent", "AMAZON.CancelIntent", HelpIntent]
 })
 
 // exports.handler = (event, context, callback) => {

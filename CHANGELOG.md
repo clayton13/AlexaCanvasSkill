@@ -20,7 +20,7 @@
 ## Feedback round two  
 - [x] Throws error when no token added....  
     - [x] Send warning when invalid canvas token is in account  
-- [ ] Implement stop and cancel  
+- [x] Implement stop and cancel  
 - [x] Fails to recognize the phrase `"...about my current grade in Math."`  
     - [x] Add `about` utterances  
 
@@ -42,3 +42,4 @@
     - Automatic generation of sample utterances  
 - Added basic help  
     - Lists the main intents and refers to website  
+- Added stop and cancel intents  
