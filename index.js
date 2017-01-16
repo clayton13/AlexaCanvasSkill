@@ -354,7 +354,15 @@ function doGetLastAssignmentsIntent(slots, attrs, data, done) {
 
         return courseOrUser.getLastGraded(coursenumberOfAssignments).then(assignmentArr => {
             assignmentArr.forEach(assignment => {
-                stringResult += (assignment.name) + " is " + assignment.getGrade()[0] + " percent.<break time='2ms'/>\n";
+                var strGrade = "";
+                var grade = assignment.getGrade()[0];
+                if (typeof grade !== 'undefined' && grade !== null) {
+                    strGrade = grade + " percent."
+                } else {
+                    strGrade = "not listed."
+                }
+
+                stringResult += (assignment.name) + " is " + strGrade + " <break time='2ms'/>\n";
             });
             done({
                 text: wrapSSML(stringResult),
@@ -420,7 +428,15 @@ function doGetGradeIntent(slots, attrs, data, done) {
 
     function doGetGrade(course, done) {
         // console.log(course)
-        var stringResult = "Your current grade in " + (course.meta.title || course.nickname) + " is " + course.getGrade() + " percent.";
+        var strGrade = "";
+        var grade = course.getGrade();
+        if (typeof grade !== 'undefined' && grade !== null) {
+            strGrade = grade + " percent."
+        } else {
+            strGrade = "not listed."
+        }
+
+        var stringResult = "Your current grade in " + (course.meta.title || course.nickname) + " is " + strGrade;
         console.log(stringResult);
 
         done({

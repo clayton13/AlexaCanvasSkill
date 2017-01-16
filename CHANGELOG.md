@@ -43,3 +43,4 @@
 - Added basic help  
     - Lists the main intents and refers to website  
 - Added stop and cancel intents  
+- Basic sound interface quality changes
