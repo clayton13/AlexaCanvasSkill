@@ -249,7 +249,9 @@ var getHowWellIntent = app.intent('GetHowWellIntent', 'read original request dat
                 var numOfGradeLetter = letters[key];
                 if (numOfGradeLetter > 0) {
                     var addS = numOfGradeLetter > 1 ? "&apos;s " : " ";
-                    var and = index == Object.keys(letters).length - 1 ? "and " : "";
+                    var and = "";
+                    if (index == Object.keys(letters).length - 1 && index != 0)
+                        and = "and ";
                     str += and + numOfGradeLetter + key + addS + '<break time="5ms"/>'
                     console.log(numOfGradeLetter + key + addS)
                 }
