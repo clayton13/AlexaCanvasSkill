@@ -44,6 +44,14 @@ function User(data) {
 
 }
 
+function hasValidToken() {
+    if (isValidObject(this.user_data) && isValidObject(this.user_data.canvas_account)) {
+        return this.user_data.canvas_account.valid || false;
+    }
+    return false;
+}
+User.prototype.hasValidToken = hasValidToken;
+
 
 function testCanvasAccount(token) {
     return this.getAccount(token).then(cUser => {
