@@ -15,7 +15,7 @@
     - [x] Implement `"to"` phrase. Ie. "Alexa ask My Gradebook to tell me about my upcoming assignments".
 - [x] If user input is required after launching the skill with no intent, a welcome prompt must be provided which describes what users can ask of the skill and the session must remain open for a user response. If the session closes after launching the skill, a core functionality must be completed without prompting users to speak. Also the welcome phrase must be appropriate to the context of the skill’s functionality as defined in its description. Please see test case 4.1 from our Submission Checklist for guidance on session management.
     - [x] Add instructions, keep session open ~~and forward to appropriate intent. ~~
-- [ ] Update readme
+- [x] Update readme
    
 ## Feedback round two  
 - [x] Throws error when no token added....  

@@ -6,7 +6,7 @@ This is a really powerful [Alexa skill](https://developer.amazon.com/alexa-skill
 This program allows users to use Amazon Alexa to fetch information about their school grades and calendar. It does this by first connecting them to their Canvas account via an access token. They are able to do this initial setup at the website [CanvasSkill.tk](https://canvasskill.tk). Once they have added this access token, their user and course data is fetched from Canvas’ public API. This data is then shown to the users where they are encouraged to define custom nicknames for their courses. These individualized nicknames allow Alexa to match courses based on the user’s own personal vocabulary. This in turn, allows users to speak naturally to Alexa to gather information from Canvas. 
 
 ### Technical Info
-This project is split into two major components: the actual skill and then the website. The skill is hosted on AWS Lambda, the website is hosted on an AWS t2.micro instance, and I opted to use an AWS DynamoDB database to store all my users’ data. I chose DynamoDB mainly because it was a NoSQL database and I was familiar with JavaScript, it also easily integrated with the rest of the services. 
+This project is split into two major components: the actual skill and then the website. Both of which were written in Node, aka JavaScript. The skill is hosted on AWS Lambda, the website is hosted on an AWS t2.micro instance, and I opted to use an AWS DynamoDB database to store all my users’ data. I chose DynamoDB mainly because it was a NoSQL database and I was familiar with JavaScript, it also easily integrated with the rest of the services. 
 
 The website itself is a node server serving a mixture of [ejs]( https://github.com/mde/ejs) and [Backbone]( https://github.com/jashkenas/backbone) components (much like Angular) and providing a graphical user interface to the token store and the custom nicknames stored in the database. All endpoints are secured over SSL provided by for free by [letsencrypt](https://letsencrypt.org/) and authentication is all supported by OAuth2.0.<sup>[1](#notes)</sup>&nbsp; The domain name is provided free from [dot.tk](http://www.dot.tk/en/index.html).
 
@@ -17,7 +17,7 @@ Instructure Canvas has a fabulous API located [here](https://canvas.instructure.
 ## Skill 
 The actual skill was made using [Alexia](https://github.com/Accenture/alexia), it provided a good framework to begin developing the skill. The way the skill works is when a user makes a request, it checks to see if they have linked the skill in Alexa app; if they have, it looks them up in the [Database](#database). From the database a `CanvasUser` is returned, an object containing all the methods to get `Courses` and `Assignments`. 
 
-**Alexa, ask grades:**
+**Alexa, ask my grade book:**
 ```
 How are my grades?  
 
